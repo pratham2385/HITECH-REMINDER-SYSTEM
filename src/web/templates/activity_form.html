@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>{% if activity %}Edit Activity{% else %}New Activity{% endif %}</h1>
+    <p>Changes here affect the next scheduled notification.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post" class="form-grid">
+    <label>
+      Activity
+      <input type="text" name="activity" value="{{ activity.activity if activity else '' }}" required>
+    </label>
+    <label>
+      Frequency
+      <select name="frequency" required>
+        {% for item in frequencies %}
+          <option value="{{ item }}" {% if activity and activity.frequency == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Date Rule
+      <input type="text" name="date_value" value="{{ activity.date_value if activity else '' }}" placeholder="7, 20, July month, Last day of the month">
+    </label>
+    <label>
+      Linked Module
+      <select name="linked_module_id">
+        <option value="">None</option>
+        {% for module in modules %}
+          <option value="{{ module.id }}" {% if activity and activity.linked_module_id == module.id %}selected{% endif %}>{{ module.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Link
+      <input type="text" name="link" value="{{ activity.link if activity else '' }}">
+    </label>
+    <label>
+      Status
+      <input type="text" name="status" value="{{ activity.status if activity else '' }}">
+    </label>
+    <label class="span-2">
+      Remark
+      <textarea name="remark" rows="4">{{ activity.remark if activity else '' }}</textarea>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="button primary">Save</button>
+      <a href="/activities" class="button ghost">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+

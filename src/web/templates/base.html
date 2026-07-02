@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="{{ request.url_for('static', path='styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/dashboard">{{ app_name }}</a>
+    {% if user %}
+      <nav class="nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/activities">Activities</a>
+        <a href="/modules">Modules</a>
+        <a href="/imports">Imports</a>
+        <a href="/reminders/preview">Reminders</a>
+        {% if user.is_owner %}
+          <a href="/settings/email">Email</a>
+          <a href="/settings/whatsapp">WhatsApp</a>
+          <a href="/users">Users</a>
+        {% endif %}
+      </nav>
+      <form action="/logout" method="post" class="logout-form">
+        <span>{{ user.display_name }} · {{ user.role|title }}</span>
+        <button type="submit" class="button ghost">Logout</button>
+      </form>
+    {% endif %}
+  </header>
+
+  <main class="page">
+    {% if notice %}
+      <div class="alert success">{{ notice }}</div>
+    {% endif %}
+    {% if error %}
+      <div class="alert error">{{ error }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
+

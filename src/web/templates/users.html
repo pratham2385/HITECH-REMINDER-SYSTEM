@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Users</h1>
+    <p>Owner, staff, and viewer access.</p>
+  </div>
+  <a href="/users/new" class="button primary">Add User</a>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for account in users %}
+          <tr>
+            <td>{{ account.username }}</td>
+            <td>{{ account.display_name }}</td>
+            <td>{{ account.role }}</td>
+            <td>{{ "Active" if account.is_active else "Inactive" }}</td>
+            <td><a href="/users/{{ account.id }}/edit">Edit</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

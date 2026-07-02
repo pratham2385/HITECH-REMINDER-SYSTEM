@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Email Settings</h1>
+    <p>Gmail SMTP configuration for scheduled reminders.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post" class="form-grid">
+    <label>
+      Gmail Address
+      <input type="email" name="email_address" value="{{ settings.email_address }}">
+    </label>
+    <label>
+      Recipient Email
+      <input type="email" name="recipient_email" value="{{ settings.recipient_email }}">
+    </label>
+    <label class="span-2">
+      Gmail App Password {% if masked_password %}<span class="hint">Current: {{ masked_password }}</span>{% endif %}
+      <input type="password" name="email_app_password" placeholder="Leave blank to keep current password">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="button primary">Save Email Settings</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+

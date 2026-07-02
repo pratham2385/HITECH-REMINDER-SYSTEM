@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-panel">
+  <h1>Dashboard Login</h1>
+  <form method="post" action="/login" class="form-grid">
+    <label>
+      Username
+      <input type="text" name="username" autocomplete="username" required>
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="button primary">Login</button>
+  </form>
+</section>
+{% endblock %}
+

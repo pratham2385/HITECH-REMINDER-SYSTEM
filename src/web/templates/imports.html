@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Excel Imports</h1>
+    <p>Upload workbooks and convert sheets into website modules.</p>
+  </div>
+  {% if user.can_edit %}
+    <a href="/imports/new" class="button primary">Import Excel</a>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Status</th>
+          <th>Sheets</th>
+          <th>Rows</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in imports %}
+          <tr>
+            <td>{{ item.original_filename }}</td>
+            <td>{{ item.status }}</td>
+            <td>{{ item.sheet_count }}</td>
+            <td>{{ item.row_count }}</td>
+            <td>{{ item.created_at.strftime("%d %b %Y %H:%M") }}</td>
+            <td><a href="/imports/{{ item.id }}">Open</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No imports yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

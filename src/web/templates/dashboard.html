@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Owner Dashboard</h1>
+    <p>{{ today.strftime("%d %B %Y") }}</p>
+  </div>
+  {% if user.can_edit %}
+    <a href="/activities/new" class="button primary">Add Activity</a>
+  {% endif %}
+</section>
+
+<section class="metric-grid">
+  <article class="metric"><span>Due Today</span><strong>{{ due_records|length }}</strong></article>
+  <article class="metric"><span>Pending</span><strong>{{ pending_count }}</strong></article>
+  <article class="metric"><span>Done</span><strong>{{ done_count }}</strong></article>
+  <article class="metric"><span>Modules</span><strong>{{ module_count }}</strong></article>
+</section>
+
+<section class="two-column">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Today</h2>
+      <a href="/reminders/preview">Preview</a>
+    </div>
+    {% if due_records %}
+      <ol class="clean-list numbered">
+        {% for item in due_records %}
+          <li>
+            <strong>{{ item.activity }}</strong>
+            <span>{{ item.frequency }}{% if item.date_value %} · {{ item.date_value }}{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="empty">No activity is due today.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Upcoming</h2>
+      <a href="/activities">Manage</a>
+    </div>
+    {% if upcoming %}
+      <ul class="clean-list">
+        {% for run_date, item in upcoming %}
+          <li>
+            <strong>{{ run_date.strftime("%d %b") }}</strong>
+            <span>{{ item.activity }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">No upcoming activity found.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="two-column">
+  <div class="panel">
+    <h2>Notification Status</h2>
+    <dl class="status-list">
+      <div><dt>Last Run</dt><dd>{% if last_run %}{{ last_run.created_at.strftime("%d %b %Y %H:%M") }} · {{ last_run.message }}{% else %}Not run yet{% endif %}</dd></div>
+      <div><dt>Email</dt><dd>{% if last_email %}{{ "Sent" if last_email.success else "Failed" }} · {{ last_email.message }}{% else %}No email log{% endif %}</dd></div>
+      <div><dt>WhatsApp</dt><dd>{% if last_whatsapp %}{{ "Sent" if last_whatsapp.success else "Failed" }} · {{ last_whatsapp.message }}{% else %}No WhatsApp log{% endif %}</dd></div>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Quick Modules</h2>
+      <a href="/modules">All</a>
+    </div>
+    {% if modules %}
+      <div class="module-links">
+        {% for module in modules %}
+          <a href="/modules/{{ module.id }}">{{ module.name }}</a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">Import an Excel workbook to create modules.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+

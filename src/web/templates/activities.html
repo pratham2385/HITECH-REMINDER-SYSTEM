@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Activities</h1>
+    <p>Reminder source for email and WhatsApp.</p>
+  </div>
+  {% if user.can_edit %}
+    <a href="/activities/new" class="button primary">Add Activity</a>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Activity</th>
+          <th>Frequency</th>
+          <th>Date Rule</th>
+          <th>Status</th>
+          <th>Module</th>
+          <th>Remark</th>
+          {% if user.can_edit %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in activities %}
+          <tr>
+            <td>{{ item.activity }}</td>
+            <td>{{ item.frequency }}</td>
+            <td>{{ item.date_value or "" }}</td>
+            <td>{{ item.status or "" }}</td>
+            <td>{% if item.linked_module %}<a href="/modules/{{ item.linked_module.id }}">{{ item.linked_module.name }}</a>{% else %}{{ item.link or "" }}{% endif %}</td>
+            <td>{{ item.remark or "" }}</td>
+            {% if user.can_edit %}
+              <td class="actions">
+                <a href="/activities/{{ item.id }}/edit" class="button small">Edit</a>
+                {% if user.is_owner %}
+                  <form method="post" action="/activities/{{ item.id }}/delete">
+                    <button type="submit" class="button small danger">Delete</button>
+                  </form>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="empty">No activities yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

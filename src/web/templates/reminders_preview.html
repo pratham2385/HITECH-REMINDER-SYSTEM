@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Reminder Preview</h1>
+    <p>Email and WhatsApp content for today.</p>
+  </div>
+  {% if user.is_owner %}
+    <div class="action-row">
+      <form method="post" action="/reminders/send-test-email"><button type="submit" class="button">Test Email</button></form>
+      <form method="post" action="/reminders/send-test-whatsapp"><button type="submit" class="button">Test WhatsApp</button></form>
+    </div>
+  {% endif %}
+</section>
+
+<section class="two-column">
+  <div class="panel">
+    <h2>Due Activities</h2>
+    {% if due_activities %}
+      <ol class="clean-list numbered">
+        {% for activity in due_activities %}
+          <li>{{ activity.activity }}</li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="empty">No activity is due today.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Email Body</h2>
+    {% if content %}
+      <pre class="email-preview">{{ content.body }}</pre>
+    {% else %}
+      <p class="empty">No email or WhatsApp reminder will be sent today.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+

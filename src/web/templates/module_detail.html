@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>{{ module.name }}</h1>
+    <p>{{ module.description or "Editable module" }}</p>
+  </div>
+  <a href="/modules" class="button ghost">Back</a>
+</section>
+
+<section class="panel">
+  {% if user.can_edit %}
+    <div class="toolbar">
+      <form method="post" action="/modules/{{ module.id }}/rows/new">
+        <button type="submit" class="button primary">Add Row</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/modules/{{ module.id }}/save">
+    <div class="table-wrap wide">
+      <table>
+        <thead>
+          <tr>
+            {% for field in fields %}
+              <th>{{ field.name }}</th>
+            {% endfor %}
+            {% if user.can_edit %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in record_rows %}
+            <tr>
+              {% for field in fields %}
+                {% set raw_value = row.values.get(field.name) %}
+                <td>
+                  {% if user.can_edit %}
+                    <input class="cell-input" name="cell_{{ row.record.id }}_{{ field.id }}" value="{{ raw_value|cell_display }}">
+                    {% if raw_value|cell_link %}
+                      <a class="mini-link" href="{{ raw_value|cell_link }}" target="_blank" rel="noreferrer">Open</a>
+                    {% endif %}
+                  {% else %}
+                    {% if raw_value|cell_link %}
+                      <a href="{{ raw_value|cell_link }}" target="_blank" rel="noreferrer">{{ raw_value|cell_display }}</a>
+                    {% else %}
+                      {{ raw_value|cell_display }}
+                    {% endif %}
+                  {% endif %}
+                </td>
+              {% endfor %}
+              {% if user.can_edit %}
+                <td>
+                  <button type="submit" form="delete-row-{{ row.record.id }}" class="button small danger">Delete</button>
+                </td>
+              {% endif %}
+            </tr>
+          {% else %}
+            <tr><td colspan="{{ fields|length + 1 }}" class="empty">No rows in this module.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if user.can_edit %}
+      <div class="form-actions">
+        <button type="submit" class="button primary">Save Changes</button>
+      </div>
+    {% endif %}
+  </form>
+
+  {% for row in record_rows %}
+    <form id="delete-row-{{ row.record.id }}" method="post" action="/modules/{{ module.id }}/rows/{{ row.record.id }}/delete"></form>
+  {% endfor %}
+</section>
+{% endblock %}
+

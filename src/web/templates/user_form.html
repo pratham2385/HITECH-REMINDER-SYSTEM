@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>{% if account %}Edit User{% else %}New User{% endif %}</h1>
+    <p>Manage dashboard role access.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post" class="form-grid">
+    <label>
+      Username
+      <input type="text" name="username" value="{{ account.username if account else '' }}" required>
+    </label>
+    <label>
+      Display Name
+      <input type="text" name="display_name" value="{{ account.display_name if account else '' }}" required>
+    </label>
+    <label>
+      Role
+      <select name="role">
+        {% for role in roles %}
+          <option value="{{ role }}" {% if account and account.role == role %}selected{% endif %}>{{ role|title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if account %}
+      <label class="check-row">
+        <input type="checkbox" name="is_active" value="true" {% if account.is_active %}checked{% endif %}>
+        Active
+      </label>
+    {% endif %}
+    <label class="span-2">
+      Password
+      <input type="password" name="password" {% if not account %}required{% endif %} placeholder="{% if account %}Leave blank to keep current password{% endif %}">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="button primary">Save User</button>
+      <a href="/users" class="button ghost">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
