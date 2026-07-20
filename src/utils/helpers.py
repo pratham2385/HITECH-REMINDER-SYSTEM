@@ -136,6 +136,28 @@ def extract_month_number(value: Any) -> int | None:
     return None
 
 
+DAYS_OF_WEEK = {
+    "monday": 0, "mon": 0,
+    "tuesday": 1, "tue": 1,
+    "wednesday": 2, "wed": 2,
+    "thursday": 3, "thu": 3,
+    "friday": 4, "fri": 4,
+    "saturday": 5, "sat": 5,
+    "sunday": 6, "sun": 6,
+}
+
+def extract_weekday(value: Any) -> int | None:
+    """Extract a 0-6 weekday number from text (e.g. 'Monday')."""
+    text = clean_string(value).casefold()
+    if not text:
+        return None
+    for token in re.findall(r"[a-zA-Z]+", text):
+        weekday = DAYS_OF_WEEK.get(token)
+        if weekday is not None:
+            return weekday
+    return None
+
+
 def format_run_date(run_date: date) -> str:
     """Format a date for log and email content."""
 

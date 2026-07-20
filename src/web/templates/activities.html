@@ -16,6 +16,9 @@
       <thead>
         <tr>
           <th>Activity</th>
+          <th>Assignee</th>
+          <th>Priority</th>
+          <th>Channels</th>
           <th>Frequency</th>
           <th>Date Rule</th>
           <th>Status</th>
@@ -28,6 +31,12 @@
         {% for item in activities %}
           <tr>
             <td>{{ item.activity }}</td>
+            <td>{{ item.assignee.display_name if item.assignee else 'Unassigned' }}</td>
+            <td>{{ item.priority or 'Normal' }}</td>
+            <td>
+              {% if item.email_enabled %}<span style="font-size:0.8em;background:#ccc;padding:2px 4px;border-radius:4px;">Email</span>{% endif %}
+              {% if item.whatsapp_enabled %}<span style="font-size:0.8em;background:#ccc;padding:2px 4px;border-radius:4px;">WA</span>{% endif %}
+            </td>
             <td>{{ item.frequency }}</td>
             <td>{{ item.date_value or "" }}</td>
             <td>{{ item.status or "" }}</td>

@@ -7,11 +7,11 @@ from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from src.config.settings import APP_NAME, STATIC_DIR, TEMPLATE_DIR, load_settings
 from src.db.models import (
@@ -55,6 +55,15 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.on_event("startup")
+def startup_event() -> None:
+    """Initialize database and background scheduler on application startup."""
+    init_database(settings)
+    try:
+        from src.scheduler.background_tasks import start_scheduler
+        start_scheduler()
+    except ImportError as e:
+        logger.error(f"Failed to start scheduler: {e}")
 
 def cell_display(value: object) -> str:
     """Display a flexible imported cell value."""
@@ -76,13 +85,6 @@ def cell_link(value: object) -> str:
 
 templates.env.filters["cell_display"] = cell_display
 templates.env.filters["cell_link"] = cell_link
-
-
-@app.on_event("startup")
-def startup() -> None:
-    """Initialize the database at web startup."""
-
-    init_database(settings)
 
 
 def get_db() -> Session:
@@ -150,14 +152,14 @@ def render(
     return templates.TemplateResponse(template_name, payload)
 
 
-def require_login(request: Request, db: Session) -> User | RedirectResponse:
+def require_login(request: Request, db: Session) -> User | Response:
     user = current_user(request, db)
     if user is None:
         return redirect("/login")
     return user
 
 
-def require_owner(request: Request, db: Session) -> User | RedirectResponse:
+def require_owner(request: Request, db: Session) -> User | Response:
     user = require_login(request, db)
     if isinstance(user, RedirectResponse):
         return user
@@ -166,7 +168,7 @@ def require_owner(request: Request, db: Session) -> User | RedirectResponse:
     return user
 
 
-def require_editor(request: Request, db: Session) -> User | RedirectResponse:
+def require_editor(request: Request, db: Session) -> User | Response:
     user = require_login(request, db)
     if isinstance(user, RedirectResponse):
         return user
@@ -234,7 +236,7 @@ def logout() -> RedirectResponse:
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request) -> HTMLResponse | RedirectResponse:
+def dashboard(request: Request) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -275,7 +277,7 @@ def dashboard(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @app.get("/activities", response_class=HTMLResponse)
-def activities(request: Request) -> HTMLResponse | RedirectResponse:
+def activities(request: Request) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -283,6 +285,7 @@ def activities(request: Request) -> HTMLResponse | RedirectResponse:
             return user
         rows = (
             db.query(ActivityRecord)
+            .options(joinedload(ActivityRecord.assignee), joinedload(ActivityRecord.linked_module))
             .filter(ActivityRecord.is_active.is_(True))
             .order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc())
             .all()
@@ -293,7 +296,7 @@ def activities(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @app.get("/activities/new", response_class=HTMLResponse)
-def activity_new(request: Request) -> HTMLResponse | RedirectResponse:
+def activity_new(request: Request) -> Response:
     db = get_db()
     try:
         user = require_editor(request, db)
@@ -347,7 +350,7 @@ def activity_create(
 
 
 @app.get("/activities/{activity_id}/edit", response_class=HTMLResponse)
-def activity_edit(request: Request, activity_id: int) -> HTMLResponse | RedirectResponse:
+def activity_edit(request: Request, activity_id: int) -> Response:
     db = get_db()
     try:
         user = require_editor(request, db)
@@ -417,7 +420,7 @@ def activity_delete(request: Request, activity_id: int) -> RedirectResponse:
 
 
 @app.get("/modules", response_class=HTMLResponse)
-def modules(request: Request) -> HTMLResponse | RedirectResponse:
+def modules(request: Request) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -430,7 +433,7 @@ def modules(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @app.get("/modules/{module_id}", response_class=HTMLResponse)
-def module_detail(request: Request, module_id: int) -> HTMLResponse | RedirectResponse:
+def module_detail(request: Request, module_id: int) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -533,7 +536,7 @@ def module_delete(request: Request, module_id: int) -> RedirectResponse:
 
 
 @app.get("/imports", response_class=HTMLResponse)
-def imports(request: Request) -> HTMLResponse | RedirectResponse:
+def imports(request: Request) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -546,7 +549,7 @@ def imports(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @app.get("/imports/new", response_class=HTMLResponse)
-def import_new(request: Request) -> HTMLResponse | RedirectResponse:
+def import_new(request: Request) -> Response:
     db = get_db()
     try:
         user = require_editor(request, db)
@@ -585,7 +588,7 @@ async def import_upload(request: Request, workbook: UploadFile = File(...)) -> R
 
 
 @app.get("/imports/{import_id}", response_class=HTMLResponse)
-def import_detail(request: Request, import_id: int) -> HTMLResponse | RedirectResponse:
+def import_detail(request: Request, import_id: int) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -634,7 +637,7 @@ def import_confirm(
 
 
 @app.get("/settings/email", response_class=HTMLResponse)
-def email_settings(request: Request) -> HTMLResponse | RedirectResponse:
+def email_settings(request: Request) -> Response:
     db = get_db()
     try:
         user = require_owner(request, db)
@@ -674,7 +677,7 @@ def email_settings_save(
 
 
 @app.get("/settings/whatsapp", response_class=HTMLResponse)
-def whatsapp_settings(request: Request) -> HTMLResponse | RedirectResponse:
+def whatsapp_settings(request: Request) -> Response:
     db = get_db()
     try:
         user = require_owner(request, db)
@@ -722,18 +725,32 @@ def whatsapp_settings_save(
 
 
 @app.get("/reminders/preview", response_class=HTMLResponse)
-def reminders_preview(request: Request) -> HTMLResponse | RedirectResponse:
+def reminders_preview(request: Request, preview_date: str = None) -> Response:
     db = get_db()
     try:
         user = require_login(request, db)
         if isinstance(user, RedirectResponse):
             return user
-        due_activities = get_due_domain_activities(db, logger)
-        content = build_preview_content(db, logger)
+        
+        target_date = date.today()
+        if preview_date:
+            try:
+                target_date = date.fromisoformat(preview_date)
+            except ValueError:
+                pass
+                
+        # We must pass the target_date to the service methods.
+        # But wait, build_preview_content currently calls get_due_domain_activities(session, logger, run_date)
+        # We need to make sure the service method is updated as well.
+        # It's already in reminder_service.py as build_preview_email(session, logger, run_date)
+        
+        from src.services.reminder_service import get_due_domain_activities, build_preview_email
+        due_activities = get_due_domain_activities(db, logger, target_date)
+        content = build_preview_email(db, logger, target_date)
         return render(
             request,
             "reminders_preview.html",
-            {"due_activities": due_activities, "content": content},
+            {"due_activities": due_activities, "content": content, "preview_date": target_date.isoformat()},
             user,
         )
     finally:
@@ -771,7 +788,7 @@ def reminders_send_test_whatsapp(request: Request) -> RedirectResponse:
 
 
 @app.get("/users", response_class=HTMLResponse)
-def users(request: Request) -> HTMLResponse | RedirectResponse:
+def users(request: Request) -> Response:
     db = get_db()
     try:
         user = require_owner(request, db)
@@ -784,7 +801,7 @@ def users(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 @app.get("/users/new", response_class=HTMLResponse)
-def user_new(request: Request) -> HTMLResponse | RedirectResponse:
+def user_new(request: Request) -> Response:
     db = get_db()
     try:
         user = require_owner(request, db)
@@ -828,7 +845,7 @@ def user_create(
 
 
 @app.get("/users/{user_id}/edit", response_class=HTMLResponse)
-def user_edit(request: Request, user_id: int) -> HTMLResponse | RedirectResponse:
+def user_edit(request: Request, user_id: int) -> Response:
     db = get_db()
     try:
         user = require_owner(request, db)
@@ -870,4 +887,23 @@ def user_update(
         return redirect("/users?notice=User updated")
     finally:
         close_db(db)
+
+@app.post("/users/{user_id}/delete")
+def user_delete(request: Request, user_id: int) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_owner(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        if user.id == user_id:
+            return redirect("/users?error=You cannot delete your own account")
+        account = db.query(User).filter(User.id == user_id).first()
+        if account is None:
+            return redirect("/users?error=User not found")
+        account.is_active = False
+        db.commit()
+        return redirect("/users?notice=User deleted")
+    finally:
+        close_db(db)
+
 

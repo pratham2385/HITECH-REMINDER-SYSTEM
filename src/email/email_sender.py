@@ -28,9 +28,15 @@ class GmailEmailSender:
 
         message = EmailMessage()
         message["From"] = self.settings.email_address
-        message["To"] = self.settings.recipient_email
+        
+        recipient = content.recipient if content.recipient else self.settings.recipient_email
+        if isinstance(recipient, list):
+            message["To"] = ", ".join(recipient)
+        else:
+            message["To"] = recipient
+
         message["Subject"] = content.subject
-        message.set_content(content.body)
+        message.set_content(content.body, subtype="html")
 
         try:
             with smtplib.SMTP(
@@ -57,7 +63,7 @@ class GmailEmailSender:
             return EmailSendResult(success=False, message=error)
 
         success = "Email Sent Successfully"
-        self.logger.info("%s | recipient=%s", success, self.settings.recipient_email)
+        self.logger.info("%s | recipient=%s", success, message["To"])
         return EmailSendResult(success=True, message=success)
 
     def _validate_settings(self) -> str | None:

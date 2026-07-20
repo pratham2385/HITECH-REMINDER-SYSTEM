@@ -14,12 +14,18 @@ class Activity:
     frequency: str
     date_value: Any
     row_number: int
+    assignee_email: str | None = None
+    assignee_phone: str | None = None
+    assignee_name: str | None = None
+    email_enabled: bool = True
+    whatsapp_enabled: bool = True
 
 
 @dataclass(frozen=True, slots=True)
 class EmailContent:
     """Email subject and body generated for a reminder."""
 
+    recipient: str | list[str]
     subject: str
     body: str
 

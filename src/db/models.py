@@ -17,10 +17,13 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
+    external_id = Column(String(50), unique=True, nullable=True, index=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     display_name = Column(String(150), nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="viewer")
+    phone = Column(String(50), nullable=True)
+    department = Column(String(100), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
@@ -31,6 +34,7 @@ class ActivityRecord(Base):
     __tablename__ = "activities"
 
     id = Column(Integer, primary_key=True)
+    external_id = Column(String(50), unique=True, nullable=True, index=True)
     activity = Column(String(255), nullable=False)
     frequency = Column(String(50), nullable=False)
     date_value = Column(String(100), nullable=True)
@@ -38,12 +42,17 @@ class ActivityRecord(Base):
     status = Column(String(50), nullable=True)
     remark = Column(Text, nullable=True)
     linked_module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
+    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    priority = Column(String(50), nullable=True)
+    email_enabled = Column(Boolean, nullable=False, default=True)
+    whatsapp_enabled = Column(Boolean, nullable=False, default=True)
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     linked_module = relationship("Module", back_populates="activities")
+    assignee = relationship("User")
 
 
 class Module(Base):
@@ -52,6 +61,7 @@ class Module(Base):
     __tablename__ = "modules"
 
     id = Column(Integer, primary_key=True)
+    external_id = Column(String(50), unique=True, nullable=True, index=True)
     name = Column(String(255), nullable=False, index=True)
     source_sheet_name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
@@ -177,4 +187,18 @@ class NotificationSetting(Base):
     value = Column(Text, nullable=False, default="")
     is_secret = Column(Boolean, nullable=False, default=False)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AuditLog(Base):
+    """Audit log for tracking user actions."""
+
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String(255), nullable=False)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    user = relationship("User")
 

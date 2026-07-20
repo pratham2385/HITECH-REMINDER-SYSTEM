@@ -26,11 +26,13 @@ def setup_logging(log_dir: Path) -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    email_handler = logging.FileHandler(log_dir / "email.log", encoding="utf-8")
+    from logging.handlers import RotatingFileHandler
+    
+    email_handler = RotatingFileHandler(log_dir / "email.log", encoding="utf-8", maxBytes=5 * 1024 * 1024, backupCount=5)
     email_handler.setLevel(logging.INFO)
     email_handler.setFormatter(formatter)
 
-    error_handler = logging.FileHandler(log_dir / "error.log", encoding="utf-8")
+    error_handler = RotatingFileHandler(log_dir / "error.log", encoding="utf-8", maxBytes=5 * 1024 * 1024, backupCount=5)
     error_handler.setLevel(logging.WARNING)
     error_handler.setFormatter(formatter)
 

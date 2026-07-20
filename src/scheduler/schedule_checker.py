@@ -9,11 +9,13 @@ from typing import Final
 from src.models import Activity
 from src.utils.helpers import (
     extract_month_number,
+    extract_weekday,
     is_last_day_of_month,
     is_last_day_rule,
     normalize_frequency,
     parse_day_number,
 )
+import calendar
 
 
 QUARTER_MONTHS: Final[set[int]] = {1, 4, 7, 10}
@@ -66,7 +68,12 @@ class ScheduleChecker:
                     activity.date_value,
                 )
                 return False
-            return run_date.day == day
+            
+            # If the targeted day exceeds the number of days in the current month,
+            # trigger on the last day of the current month instead.
+            last_day_of_current_month = calendar.monthrange(run_date.year, run_date.month)[1]
+            effective_trigger_day = min(day, last_day_of_current_month)
+            return run_date.day == effective_trigger_day
 
         if frequency == "quarterly":
             day = parse_day_number(activity.date_value)
@@ -78,6 +85,28 @@ class ScheduleChecker:
                 )
                 return False
             return run_date.month in QUARTER_MONTHS and run_date.day == day
+
+        if frequency == "weekly":
+            weekday = extract_weekday(activity.date_value)
+            if weekday is None:
+                self.logger.warning(
+                    "Skipping row %s because weekly Date is invalid: %r",
+                    activity.row_number,
+                    activity.date_value,
+                )
+                return False
+            return run_date.weekday() == weekday
+
+        if frequency == "bi-weekly" or frequency == "biweekly":
+            weekday = extract_weekday(activity.date_value)
+            if weekday is None:
+                self.logger.warning(
+                    "Skipping row %s because bi-weekly Date is invalid: %r",
+                    activity.row_number,
+                    activity.date_value,
+                )
+                return False
+            return run_date.weekday() == weekday and run_date.isocalendar()[1] % 2 == 0
 
         if frequency == "yearly":
             month = extract_month_number(activity.date_value)

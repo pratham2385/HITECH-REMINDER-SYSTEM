@@ -28,7 +28,7 @@
         {% for item in due_records %}
           <li>
             <strong>{{ item.activity }}</strong>
-            <span>{{ item.frequency }}{% if item.date_value %} · {{ item.date_value }}{% endif %}</span>
+            <span>{{ item.assignee.display_name if item.assignee else 'Unassigned' }} · {{ item.frequency }}{% if item.date_value %} · {{ item.date_value }}{% endif %}</span>
           </li>
         {% endfor %}
       </ol>

@@ -1,204 +1,19 @@
-"""Excel import service for turning workbooks into dashboard modules."""
+import re
 
-from __future__ import annotations
+with open("src/services/excel_importer.py", "r", encoding="utf-8") as f:
+    content = f.read()
 
-import json
-import shutil
-from dataclasses import dataclass
-from datetime import date, datetime
-from pathlib import Path
-from typing import Any
-from uuid import uuid4
+# We need to add User and NotificationSetting to imports
+content = content.replace("WorkbookImport,\n)", "WorkbookImport,\n    User,\n    NotificationSetting,\n)")
 
-from sqlalchemy.orm import Session
-
-from src.db.models import (
-    ActivityRecord,
-    ImportedSheet,
-    Module,
-    ModuleDataRecord,
-    ModuleField,
-    WorkbookImport,
-    User,
-    NotificationSetting,
-)
-from src.utils.helpers import clean_string
-
-
-@dataclass(frozen=True, slots=True)
-class SheetPreview:
-    """Preview metadata for one workbook sheet."""
-
-    name: str
-    columns: list[str]
-    row_count: int
-    sample_rows: list[dict[str, Any]]
-    is_activity_like: bool
-
-
-@dataclass(frozen=True, slots=True)
-class WorkbookPreview:
-    """Preview metadata for one workbook."""
-
-    filename: str
-    sheet_count: int
-    row_count: int
-    sheets: list[SheetPreview]
-
-
-def _load_workbook(path: Path):
-    try:
-        from openpyxl import load_workbook
-    except ModuleNotFoundError as exc:
-        raise RuntimeError("Missing required dependency: openpyxl. Run `pip install -r requirements.txt`.") from exc
-
-    return load_workbook(path, data_only=True, read_only=False)
-
-
-def _json_value(value: Any) -> Any:
-    if isinstance(value, datetime):
-        return value.isoformat(sep=" ")
-    if isinstance(value, date):
-        return value.isoformat()
-    return value
-
-
-def _cell_value(cell: Any) -> Any:
-    value = _json_value(cell.value)
-    if cell.hyperlink and cell.hyperlink.target:
-        return {"value": value if value is not None else cell.hyperlink.target, "link": cell.hyperlink.target}
-    return value
-
-
-def _display_value(value: Any) -> str:
-    if isinstance(value, dict):
-        return clean_string(value.get("value", ""))
-    return clean_string(value)
-
-
-def _make_headers(raw_headers: list[Any], column_count: int) -> list[str]:
-    headers: list[str] = []
-    seen: dict[str, int] = {}
-
-    for index in range(column_count):
-        base = _display_value(raw_headers[index]) if index < len(raw_headers) else ""
-        header = base or f"Column {index + 1}"
-        if header in seen:
-            seen[header] += 1
-            header = f"{header} {seen[header]}"
-        else:
-            seen[header] = 1
-        headers.append(header)
-
-    return headers
-
-
-def _find_header_row(rows: list[list[Any]]) -> int:
-    for index, row in enumerate(rows):
-        if any(_display_value(value) for value in row):
-            return index
-    return 0
-
-
-def _sheet_rows(sheet: Any) -> list[list[Any]]:
-    rows: list[list[Any]] = []
-    for row in sheet.iter_rows():
-        rows.append([_cell_value(cell) for cell in row])
-    return rows
-
-
-def _row_dict(columns: list[str], row: list[Any]) -> dict[str, Any]:
-    return {column: row[index] if index < len(row) else None for index, column in enumerate(columns)}
-
-
-def _is_activity_like(columns: list[str]) -> bool:
-    normalized = {column.strip().casefold() for column in columns}
-    return {"activity", "frequency", "date"}.issubset(normalized)
-
-
-class ExcelImportService:
-    """Imports uploaded Excel workbooks into modules and activities."""
-
-    def __init__(self, upload_dir: Path) -> None:
-        self.upload_dir = upload_dir
-
-    def save_uploaded_file(self, filename: str, source_path: Path) -> Path:
-        """Copy an uploaded workbook into the managed upload directory."""
-
-        self.upload_dir.mkdir(parents=True, exist_ok=True)
-        safe_name = Path(filename).name or "workbook.xlsx"
-        stored_path = self.upload_dir / f"{uuid4().hex}_{safe_name}"
-        shutil.copy2(source_path, stored_path)
-        return stored_path
-
-    def preview_workbook(self, workbook_path: Path) -> WorkbookPreview:
-        """Return a structured preview of a workbook without importing it."""
-
-        workbook = _load_workbook(workbook_path)
-        previews: list[SheetPreview] = []
-        total_rows = 0
-
-        for sheet in workbook.worksheets:
-            raw_rows = _sheet_rows(sheet)
-            if not raw_rows:
-                previews.append(SheetPreview(sheet.title, [], 0, [], False))
-                continue
-
-            column_count = max((len(row) for row in raw_rows), default=0)
-            header_index = _find_header_row(raw_rows)
-            columns = _make_headers(raw_rows[header_index] if raw_rows else [], column_count)
-            data_rows = raw_rows[header_index + 1 :]
-            row_count = sum(1 for row in data_rows if any(_display_value(value) for value in row))
-            total_rows += row_count
-            sample_rows = [_row_dict(columns, row) for row in data_rows[:5]]
-
-            previews.append(
-                SheetPreview(
-                    name=sheet.title,
-                    columns=columns,
-                    row_count=row_count,
-                    sample_rows=sample_rows,
-                    is_activity_like=_is_activity_like(columns),
-                )
-            )
-
-        return WorkbookPreview(
-            filename=workbook_path.name,
-            sheet_count=len(previews),
-            row_count=total_rows,
-            sheets=previews,
-        )
-
-    def create_pending_import(
-        self,
-        session: Session,
-        original_filename: str,
-        stored_path: Path,
-        imported_by_user_id: int | None,
-    ) -> WorkbookImport:
-        """Create a pending import history row after upload."""
-
-        preview = self.preview_workbook(stored_path)
-        record = WorkbookImport(
-            original_filename=original_filename,
-            stored_path=str(stored_path),
-            status="pending",
-            sheet_count=preview.sheet_count,
-            row_count=preview.row_count,
-            imported_by_user_id=imported_by_user_id,
-        )
-        session.add(record)
-        session.flush()
-        return record
-
-    
+new_methods = """
     def import_workbook(
         self,
         session: Session,
         workbook_import: WorkbookImport,
         import_activity_sheets: bool = True,
     ) -> WorkbookImport:
-        """Import workbook sheets based on explicit schema."""
+        \"\"\"Import workbook sheets based on explicit schema.\"\"\"
 
         workbook_path = Path(workbook_import.stored_path)
         workbook = _load_workbook(workbook_path)
@@ -403,3 +218,12 @@ class ExcelImportService:
                 setting = NotificationSetting(key=key, value=val)
                 session.add(setting)
         session.flush()
+"""
+
+# Replace `import_workbook` and everything below it
+start_idx = content.find("def import_workbook(")
+if start_idx != -1:
+    content = content[:start_idx] + new_methods
+
+with open("src/services/excel_importer.py", "w", encoding="utf-8") as f:
+    f.write(content)
