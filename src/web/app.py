@@ -309,7 +309,19 @@ def activity_send_reminder(request: Request, activity_id: int) -> RedirectRespon
             return redirect("/activities?error=No target email configured.")
             
         email_content = EmailTemplate.build(target_email, [domain_act], date.today())
-        email_result = GmailEmailSender(active_settings, logger).send(email_content)
+        
+        # Override the subject for manual reminders to prevent Gmail thread collapsing
+        # and to make it clear which activity this is for.
+        import time
+        custom_subject = f"Manual Reminder: {domain_act.activity} ({int(time.time())})"
+        from src.models import EmailContent
+        custom_content = EmailContent(
+            recipient=email_content.recipient,
+            subject=custom_subject,
+            body=email_content.body
+        )
+        
+        email_result = GmailEmailSender(active_settings, logger).send(custom_content)
         
         if email_result.success:
             return redirect("/activities?notice=Reminder sent successfully!")

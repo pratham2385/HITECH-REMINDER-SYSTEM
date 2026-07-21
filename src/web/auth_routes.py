@@ -51,7 +51,13 @@ def login_submit(
         return redirect_with_msg("/login", "Invalid email or password.", "error")
         
     if not user.email_verified:
-        return redirect_with_msg("/login", "Please verify your email before logging in.", "error")
+        return render(
+            request, 
+            "login.html", 
+            csrf_token=generate_csrf_token(request), 
+            error="Please verify your email before logging in.", 
+            unverified_email=user.email
+        )
 
     AuthService.record_login_attempt(db, user.id, client_ip, user_agent, "success")
     
@@ -93,6 +99,12 @@ def signup_submit(
     if not verify_csrf_token(request, csrf_token):
         return redirect_with_msg("/signup", "Invalid CSRF token", "error")
 
+    if not email.strip():
+        return redirect_with_msg("/signup", "Email is required.", "error")
+        
+    if not password.strip():
+        return redirect_with_msg("/signup", "Password is required.", "error")
+
     if password != confirm_password:
         return redirect_with_msg("/signup", "Passwords do not match.", "error")
         
@@ -106,7 +118,7 @@ def signup_submit(
         
     valid_roles = {"admin", "manager", "employee"}
     if role not in valid_roles:
-        role = "employee"
+        return redirect_with_msg("/signup", "Invalid role.", "error")
 
     new_user = User(
         username=email, # fallback
@@ -124,19 +136,8 @@ def signup_submit(
         db.rollback()
         return redirect_with_msg("/signup", "Email is already registered.", "error")
     
-    token = AuthService.create_email_verification_token(db, new_user)
-    
-    # Try sending email
-    try:
-        base_url = str(request.base_url).rstrip("/")
-        AuthService.send_verification_email(settings, new_user, token, base_url)
-    except Exception as e:
-        logger.error(f"Failed to send verification email for {new_user.email}: {e}")
-        db.commit()
-        return redirect_with_msg("/login", f"Registration successful, but failed to send verification email.", "error")
-
     db.commit()
-    return redirect_with_msg("/login", "Registration successful. Please check your email to verify your account.", "success")
+    return redirect_with_msg("/login", "Registration successful. You can now log in.", "success")
 
 
 @router.get("/verify-email")
@@ -156,6 +157,29 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     db.commit()
     
     return redirect_with_msg("/login", "Email verified successfully! You can now log in.", "success")
+
+
+@router.post("/resend-verification")
+def resend_verification(
+    request: Request,
+    email: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    if not verify_csrf_token(request, csrf_token):
+        return redirect_with_msg("/login", "Invalid CSRF token", "error")
+        
+    user = db.query(User).filter(User.email == email.strip().lower()).first()
+    if user and not user.email_verified:
+        token = AuthService.create_email_verification_token(db, user)
+        base_url = str(request.base_url).rstrip("/")
+        try:
+            AuthService.send_verification_email(settings, user, token, base_url)
+            return redirect_with_msg("/login", "Verification email sent! Please check your inbox.", "success")
+        except Exception:
+            return redirect_with_msg("/login", "Failed to send verification email. Please try again later.", "error")
+            
+    return redirect_with_msg("/login", "User not found or already verified.", "notice")
 
 
 @router.get("/forgot-password", response_class=HTMLResponse)
@@ -285,51 +309,6 @@ def users_page(request: Request, db: Session = Depends(get_db)):
     return render(request, "users.html", user=user, users=users, roles=ROLES, csrf_token=generate_csrf_token(request))
 
 
-@router.get("/users/new", response_class=HTMLResponse)
-def user_new(request: Request, db: Session = Depends(get_db)):
-    user = require_admin(request, db)
-    if isinstance(user, RedirectResponse): return user
-    ROLES = ["admin", "manager", "employee"]
-    return render(request, "user_form.html", user=user, account=None, roles=ROLES, csrf_token=generate_csrf_token(request))
-
-
-@router.post("/users/new")
-def user_create(
-    request: Request,
-    username: str = Form(...),
-    display_name: str = Form(...),
-    role: str = Form(...),
-    password: str = Form(...),
-    csrf_token: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    user = require_admin(request, db)
-    if isinstance(user, RedirectResponse): return user
-    
-    if not verify_csrf_token(request, csrf_token):
-        return redirect_with_msg("/users/new", "Invalid CSRF token", "error")
-        
-    ROLES = ["admin", "manager", "employee"]
-    if role not in ROLES:
-        return redirect_with_msg("/users/new", "Invalid role", "error")
-        
-    if db.query(User).filter((User.username == username.strip()) | (User.email == username.strip())).first():
-        return redirect_with_msg("/users/new", "Username or email already exists", "error")
-        
-    db.add(
-        User(
-            username=username.strip(),
-            email=username.strip(),
-            display_name=display_name.strip(),
-            role=role,
-            password_hash=hash_password(password),
-            is_active=True,
-            email_verified=True, # Created by admin
-        )
-    )
-    db.commit()
-    return redirect_with_msg("/users", "User created successfully", "success")
-
 
 @router.get("/users/{user_id}/edit", response_class=HTMLResponse)
 def user_edit(request: Request, user_id: int, db: Session = Depends(get_db)):
@@ -415,6 +394,24 @@ def toggle_user(request: Request, user_id: int, csrf_token: str = Form(...), db:
         target_user.is_active = not target_user.is_active
         db.commit()
         return redirect_with_msg("/users", f"User {'activated' if target_user.is_active else 'deactivated'} successfully", "success")
+        
+    return redirect_with_msg("/users", "User not found", "error")
+
+
+@router.post("/users/{user_id}/verify")
+def toggle_user_verify(request: Request, user_id: int, csrf_token: str = Form(...), db: Session = Depends(get_db)):
+    user = require_admin(request, db)
+    if isinstance(user, RedirectResponse): return user
+    
+    if not verify_csrf_token(request, csrf_token):
+        return redirect_with_msg("/users", "Invalid CSRF token", "error")
+        
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if target_user:
+        target_user.email_verified = not target_user.email_verified
+        db.commit()
+        status_msg = "verified" if target_user.email_verified else "unverified"
+        return redirect_with_msg("/users", f"User {status_msg} successfully", "success")
         
     return redirect_with_msg("/users", "User not found", "error")
 

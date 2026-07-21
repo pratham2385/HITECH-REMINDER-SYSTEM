@@ -31,6 +31,7 @@ class User(Base):
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
     email_verification_tokens = relationship("EmailVerificationToken", back_populates="user", cascade="all, delete-orphan")
     login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
+    activities = relationship("ActivityRecord", back_populates="assigned_user")
 
 
 class ActivityRecord(Base):
@@ -55,7 +56,7 @@ class ActivityRecord(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     linked_module = relationship("Module", back_populates="activities")
-    assigned_user = relationship("User")
+    assigned_user = relationship("User", back_populates="activities")
 
 
 class Module(Base):

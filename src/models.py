@@ -14,6 +14,7 @@ class Activity:
     frequency: str
     date_value: Any
     row_number: int
+    assigned_user_id: int | None = None
     assigned_user_email: str | None = None
     assigned_user_name: str | None = None
 

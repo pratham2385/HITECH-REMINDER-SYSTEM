@@ -20,6 +20,7 @@ def activity_record_to_domain(record: ActivityRecord) -> Activity:
         frequency=record.frequency,
         date_value=record.date_value,
         row_number=record.id,
+        assigned_user_id=record.assigned_user.id if record.assigned_user else None,
         assigned_user_email=record.assigned_user.email if record.assigned_user else None,
         assigned_user_name=record.assigned_user.display_name if record.assigned_user else None,
     )

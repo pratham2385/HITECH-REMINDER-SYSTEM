@@ -67,6 +67,8 @@ def send_daily_reminders(
     active_settings = effective_settings(session, settings)
     due_activities = get_due_domain_activities(session, logger, effective_date)
 
+    from src.db.models import ReminderRun, User
+
     reminder_run = ReminderRun(
         run_date=effective_date.isoformat(),
         activity_count=len(due_activities),
@@ -87,13 +89,24 @@ def send_daily_reminders(
 
     from collections import defaultdict
     user_activities = defaultdict(list)
+    
+    # All active and verified users should receive reminders for unassigned activities (global)
+    active_users = session.query(User).filter(User.is_active == True, User.email_verified == True).all()
+    verified_emails = {u.email for u in active_users if u.email}
+    global_recipients = list(verified_emails)
+
     for act in due_activities:
         if act.assigned_user_email:
-            user_activities[act.assigned_user_email].append(act)
+            if act.assigned_user_email in verified_emails:
+                user_activities[act.assigned_user_email].append(act)
+            else:
+                logger.info(
+                    "Activity: %s | Assigned User: %s | Result: Skipped (User not verified or inactive)",
+                    act.activity,
+                    act.assigned_user_email
+                )
         else:
             user_activities["__global__"].append(act)
-
-    global_recipients = [r.strip() for r in active_settings.recipient_email.split(",") if r.strip()]
     
     all_email_success = True
     messages = []
@@ -103,6 +116,18 @@ def send_daily_reminders(
         email_content = EmailTemplate.build(recipients, activities, effective_date)
         email_result = GmailEmailSender(active_settings, logger).send(email_content)
         
+        # Temporary logs
+        for act in activities:
+            logger.info(
+                "Activity: %s | Assigned User ID: %s | Assigned User Email: %s | Recipient Used: %s | SMTP Recipient: %s | Result: %s",
+                act.activity,
+                act.assigned_user_id if hasattr(act, 'assigned_user_id') else 'None',
+                act.assigned_user_email,
+                user_email,
+                ", ".join(recipients) if isinstance(recipients, list) else recipients,
+                "Success" if email_result.success else "Failure"
+            )
+
         if not email_result.success:
             all_email_success = False
         messages.append(f"{user_email}: {email_result.message}")

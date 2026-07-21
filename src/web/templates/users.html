@@ -2,7 +2,6 @@
 {% block content %}
 <div class="content-header">
   <h1>User Management</h1>
-  <a href="/users/new" class="button primary">Add New User</a>
 </div>
 
 <section class="card">
@@ -31,6 +30,16 @@
         </td>
         <td>
           <a href="/users/{{ u.id }}/edit" class="button ghost">Edit</a>
+          
+          <form method="post" action="/users/{{ u.id }}/verify" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if u.email_verified %}
+              <button type="submit" class="button ghost" style="color: #666;" title="Mark as unverified">Unverify</button>
+            {% else %}
+              <button type="submit" class="button ghost" style="color: #0b5394;" title="Mark as verified">Verify</button>
+            {% endif %}
+          </form>
+
           <form method="post" action="/users/{{ u.id }}/toggle" style="display: inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             {% if u.is_active %}
@@ -39,6 +48,7 @@
               <button type="submit" class="button ghost" style="color: #137333;">Activate</button>
             {% endif %}
           </form>
+
           <form method="post" action="/users/{{ u.id }}/delete" style="display: inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="button ghost" style="color: #c5221f;" onclick="return confirm('Delete this user permanently?');">Delete</button>

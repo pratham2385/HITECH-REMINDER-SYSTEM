@@ -25,6 +25,17 @@
       Don't have an account? <a href="/signup">Sign up</a>
     </p>
   </form>
+
+  {% if unverified_email %}
+  <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+    <p style="margin-bottom: 10px; font-size: 0.9em; color: #666;">Didn't receive the verification email?</p>
+    <form method="post" action="/resend-verification">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="email" value="{{ unverified_email }}">
+      <button type="submit" class="button" style="width: 100%; padding: 10px; background: #f0f0f0; color: #333;">Resend Verification Email</button>
+    </form>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}
 
