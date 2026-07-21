@@ -17,15 +17,20 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String(50), unique=True, nullable=True, index=True)
-    username = Column(String(100), unique=True, nullable=False, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True) # Kept for legacy compatibility if needed
+    email = Column(String(255), unique=True, nullable=False, index=True)
     display_name = Column(String(150), nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False, default="viewer")
-    phone = Column(String(50), nullable=True)
-    department = Column(String(100), nullable=True)
+    role = Column(String(20), nullable=False, default="employee")
     is_active = Column(Boolean, nullable=False, default=True)
+    email_verified = Column(Boolean, nullable=False, default=False)
+    must_change_password = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
+    email_verification_tokens = relationship("EmailVerificationToken", back_populates="user", cascade="all, delete-orphan")
+    login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
 
 
 class ActivityRecord(Base):
@@ -34,25 +39,23 @@ class ActivityRecord(Base):
     __tablename__ = "activities"
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String(50), unique=True, nullable=True, index=True)
     activity = Column(String(255), nullable=False)
     frequency = Column(String(50), nullable=False)
     date_value = Column(String(100), nullable=True)
     link = Column(String(255), nullable=True)
     status = Column(String(50), nullable=True)
     remark = Column(Text, nullable=True)
-    linked_module_id = Column(Integer, ForeignKey("modules.id"), nullable=True)
-    assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    priority = Column(String(50), nullable=True)
-    email_enabled = Column(Boolean, nullable=False, default=True)
-    whatsapp_enabled = Column(Boolean, nullable=False, default=True)
+    linked_module_id = Column(Integer, ForeignKey("modules.id", ondelete="SET NULL"), nullable=True)
+    assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
+    email_enabled = Column(Boolean, nullable=False, default=True)
+    whatsapp_enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     linked_module = relationship("Module", back_populates="activities")
-    assignee = relationship("User")
+    assigned_user = relationship("User")
 
 
 class Module(Base):
@@ -61,7 +64,6 @@ class Module(Base):
     __tablename__ = "modules"
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String(50), unique=True, nullable=True, index=True)
     name = Column(String(255), nullable=False, index=True)
     source_sheet_name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
@@ -91,13 +93,15 @@ class ModuleDataRecord(Base):
     __tablename__ = "module_records"
 
     id = Column(Integer, primary_key=True)
-    module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
+    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     row_number = Column(Integer, nullable=False, default=0)
     values_json = Column(Text, nullable=False, default="{}")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     module = relationship("Module", back_populates="records")
+    assigned_user = relationship("User")
 
 
 class WorkbookImport(Base):
@@ -201,4 +205,49 @@ class AuditLog(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     user = relationship("User")
+
+
+class PasswordResetToken(Base):
+    """Tokens for password reset."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="password_reset_tokens")
+
+
+class EmailVerificationToken(Base):
+    """Tokens for email verification."""
+
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="email_verification_tokens")
+
+
+class LoginHistory(Base):
+    """History of login attempts for rate limiting and auditing."""
+
+    __tablename__ = "login_history"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    ip_address = Column(String(50), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    status = Column(String(50), nullable=False) # e.g. success, failed, locked
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="login_history")
 

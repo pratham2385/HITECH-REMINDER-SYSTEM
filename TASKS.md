@@ -20,4 +20,4 @@ This list consolidates remaining features, technical debt, and system enhancemen
 - [ ] **Microsoft Teams Notifications**: Implement Webhook-based messaging to Teams channels.
 - [ ] **Slack Notifications**: Implement Webhook-based messaging to Slack channels.
 - [ ] **Holiday Calendar**: Allow skipping reminders or shifting them to the previous/next working day when the due date lands on a public holiday or weekend.
-- [ ] **Deprecate Dead Code**: Fully remove `src/excel/excel_reader.py` if `src/services/excel_importer.py` provides complete parity.
+- [x] **Deprecate Dead Code**: Fully remove `src/excel/excel_reader.py` if `src/services/excel_importer.py` provides complete parity.

@@ -43,7 +43,6 @@ class WhatsAppSender:
         self,
         activities: list[Activity],
         run_date: date,
-        recipient_number: str,
     ) -> WhatsAppSendResult:
         """Send one WhatsApp template message containing all due activities."""
 
@@ -56,9 +55,9 @@ class WhatsAppSender:
             f"{self.settings.whatsapp_graph_api_url.rstrip('/')}/"
             f"{self.settings.whatsapp_phone_number_id}/messages"
         )
-        recipients = [r.strip() for r in recipient_number.split(",") if r.strip()]
+        recipients = [r.strip() for r in self.settings.whatsapp_recipient_number.split(",") if r.strip()]
         if not recipients:
-            return WhatsAppSendResult(success=False, message="No WhatsApp recipients provided.")
+            return WhatsAppSendResult(success=False, message="No WhatsApp recipients configured.")
 
         overall_success = True
         messages = []

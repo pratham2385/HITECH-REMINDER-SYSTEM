@@ -23,15 +23,19 @@
         {% endif %}
       </nav>
       <form action="/logout" method="post" class="logout-form">
-        <span>{{ user.display_name }} · {{ user.role|title }}</span>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <a href="/profile" style="margin-right: 15px; text-decoration: none; font-weight: 500;">{{ user.display_name }} ({{ user.role|title }})</a>
         <button type="submit" class="button ghost">Logout</button>
       </form>
     {% endif %}
   </header>
 
   <main class="page">
+    {% if success %}
+      <div class="alert success">{{ success }}</div>
+    {% endif %}
     {% if notice %}
-      <div class="alert success">{{ notice }}</div>
+      <div class="alert notice">{{ notice }}</div>
     {% endif %}
     {% if error %}
       <div class="alert error">{{ error }}</div>

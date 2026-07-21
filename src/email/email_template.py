@@ -20,8 +20,6 @@ class EmailTemplate:
         if not activities:
             return EmailContent(recipient=recipient, subject=subject, body="No activities due today.")
 
-        assignee_name = activities[0].assignee_name if activities[0].assignee_name and activities[0].assignee_name != "Unassigned" else None
-
         html = [
             "<html>",
             "<head><style>",
@@ -29,22 +27,19 @@ class EmailTemplate:
             "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }",
             "th { background-color: #f2f2f2; }",
             "</style></head>",
-            "<body>"
-        ]
-        
-        if assignee_name:
-            html.append(f"<p>Hi {assignee_name},</p>")
-            
-        html.extend([
+            "<body>",
             "<h2>The following activities are scheduled for today (" + format_run_date(effective_date) + "):</h2>",
             "<table>",
-            "<tr><th>Activity</th><th>Frequency</th></tr>"
-        ])
+            "<tr><th>Activity</th><th>Frequency</th><th>Remark</th><th>Link</th></tr>"
+        ]
         
-        for record in sorted(activities, key=lambda a: a.row_number):
+        for record in sorted(activities, key=lambda a: a.sort_order if getattr(a, 'sort_order', None) is not None else 0):
             html.append("<tr>")
             html.append(f"<td>{record.activity}</td>")
             html.append(f"<td>{record.frequency}</td>")
+            html.append(f"<td>{getattr(record, 'remark', '') or ''}</td>")
+            link_html = f"<a href='{record.link}'>View</a>" if getattr(record, 'link', None) else ""
+            html.append(f"<td>{link_html}</td>")
             html.append("</tr>")
 
         html.append("</table>")

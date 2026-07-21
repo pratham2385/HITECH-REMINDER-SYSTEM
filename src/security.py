@@ -5,42 +5,37 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-import secrets
 import time
+import bcrypt
 
-
-PASSWORD_ALGORITHM = "pbkdf2_sha256"
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 
 
 def hash_password(password: str) -> str:
-    """Hash a password with PBKDF2-HMAC-SHA256."""
-
-    salt = secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
-    return (
-        f"{PASSWORD_ALGORITHM}$200000$"
-        f"{base64.b64encode(salt).decode('ascii')}$"
-        f"{base64.b64encode(digest).decode('ascii')}"
-    )
+    """Hash a password with bcrypt."""
+    salt = bcrypt.gensalt()
+    # bcrypt returns bytes, we decode to string for the database
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against a stored hash."""
-
+    """Verify a password against a stored bcrypt hash. Supports fallback if needed."""
     try:
-        algorithm, rounds, encoded_salt, encoded_digest = stored_hash.split("$", 3)
-        if algorithm != PASSWORD_ALGORITHM:
-            return False
-        salt = base64.b64decode(encoded_salt)
-        expected_digest = base64.b64decode(encoded_digest)
-        actual_digest = hashlib.pbkdf2_hmac(
-            "sha256",
-            password.encode("utf-8"),
-            salt,
-            int(rounds),
-        )
-        return hmac.compare_digest(actual_digest, expected_digest)
+        # Check if it's the old PBKDF2 hash
+        if stored_hash.startswith("pbkdf2_sha256$"):
+            algorithm, rounds, encoded_salt, encoded_digest = stored_hash.split("$", 3)
+            salt = base64.b64decode(encoded_salt)
+            expected_digest = base64.b64decode(encoded_digest)
+            actual_digest = hashlib.pbkdf2_hmac(
+                "sha256",
+                password.encode("utf-8"),
+                salt,
+                int(rounds),
+            )
+            return hmac.compare_digest(actual_digest, expected_digest)
+        
+        # Native bcrypt verify
+        return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
     except Exception:
         return False
 

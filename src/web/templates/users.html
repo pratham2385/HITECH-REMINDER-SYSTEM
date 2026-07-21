@@ -1,32 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-heading">
-  <div>
-    <h1>Users</h1>
-    <p>Owner, staff, and viewer access.</p>
-  </div>
-  <a href="/users/new" class="button primary">Add User</a>
-</section>
+<div class="content-header">
+  <h1>User Management</h1>
+  <a href="/users/new" class="button primary">Add New User</a>
+</div>
 
-<section class="panel">
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-        {% for account in users %}
-          <tr>
-            <td>{{ account.username }}</td>
-            <td>{{ account.display_name }}</td>
-            <td>{{ account.role }}</td>
-            <td>{{ "Active" if account.is_active else "Inactive" }}</td>
-            <td><a href="/users/{{ account.id }}/edit">Edit</a></td>
-          </tr>
-        {% else %}
-          <tr><td colspan="5" class="empty">No users found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<section class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.display_name }}</td>
+        <td>{{ u.email }}</td>
+        <td><span class="badge">{{ u.role|title }}</span></td>
+        <td>
+          {% if u.is_active %}
+            <span class="badge" style="background: #e6f4ea; color: #137333;">Active</span>
+          {% else %}
+            <span class="badge" style="background: #fce8e6; color: #c5221f;">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/users/{{ u.id }}/edit" class="button ghost">Edit</a>
+          <form method="post" action="/users/{{ u.id }}/toggle" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if u.is_active %}
+              <button type="submit" class="button ghost" style="color: #c5221f;">Deactivate</button>
+            {% else %}
+              <button type="submit" class="button ghost" style="color: #137333;">Activate</button>
+            {% endif %}
+          </form>
+          <form method="post" action="/users/{{ u.id }}/delete" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="button ghost" style="color: #c5221f;" onclick="return confirm('Delete this user permanently?');">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </section>
 {% endblock %}
-

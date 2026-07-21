@@ -27,7 +27,7 @@ class GmailEmailSender:
             return EmailSendResult(success=False, message=validation_error)
 
         message = EmailMessage()
-        message["From"] = self.settings.email_address
+        message["From"] = f"HITECH Reminder System <{self.settings.email_address}>"
         
         recipient = content.recipient if content.recipient else self.settings.recipient_email
         if isinstance(recipient, list):
@@ -36,7 +36,13 @@ class GmailEmailSender:
             message["To"] = recipient
 
         message["Subject"] = content.subject
-        message.set_content(content.body, subtype="html")
+        
+        # Add a plain text body to avoid spam filters dropping HTML-only emails
+        plain_text = content.body.replace("<br>", "\n").replace("</p>", "\n").replace("</tr>", "\n")
+        plain_text = ''.join(c for c in plain_text if c not in '<>{}[]~') # crude html strip
+        
+        message.set_content("Please enable HTML to view this reminder email.")
+        message.add_alternative(content.body, subtype="html")
 
         try:
             with smtplib.SMTP(

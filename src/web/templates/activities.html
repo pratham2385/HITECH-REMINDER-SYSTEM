@@ -16,13 +16,11 @@
       <thead>
         <tr>
           <th>Activity</th>
-          <th>Assignee</th>
-          <th>Priority</th>
-          <th>Channels</th>
           <th>Frequency</th>
           <th>Date Rule</th>
           <th>Status</th>
           <th>Module</th>
+          <th>Assigned User</th>
           <th>Remark</th>
           {% if user.can_edit %}<th>Actions</th>{% endif %}
         </tr>
@@ -31,22 +29,20 @@
         {% for item in activities %}
           <tr>
             <td>{{ item.activity }}</td>
-            <td>{{ item.assignee.display_name if item.assignee else 'Unassigned' }}</td>
-            <td>{{ item.priority or 'Normal' }}</td>
-            <td>
-              {% if item.email_enabled %}<span style="font-size:0.8em;background:#ccc;padding:2px 4px;border-radius:4px;">Email</span>{% endif %}
-              {% if item.whatsapp_enabled %}<span style="font-size:0.8em;background:#ccc;padding:2px 4px;border-radius:4px;">WA</span>{% endif %}
-            </td>
             <td>{{ item.frequency }}</td>
             <td>{{ item.date_value or "" }}</td>
             <td>{{ item.status or "" }}</td>
             <td>{% if item.linked_module %}<a href="/modules/{{ item.linked_module.id }}">{{ item.linked_module.name }}</a>{% else %}{{ item.link or "" }}{% endif %}</td>
+            <td>{{ item.assigned_user.display_name if item.assigned_user else "None (Global)" }}</td>
             <td>{{ item.remark or "" }}</td>
             {% if user.can_edit %}
               <td class="actions">
+                <form method="post" action="/activities/{{ item.id }}/send-reminder" style="display:inline-block; margin-right: 4px;">
+                  <button type="submit" class="button small">Send Now</button>
+                </form>
                 <a href="/activities/{{ item.id }}/edit" class="button small">Edit</a>
                 {% if user.is_owner %}
-                  <form method="post" action="/activities/{{ item.id }}/delete">
+                  <form method="post" action="/activities/{{ item.id }}/delete" style="display:inline-block;">
                     <button type="submit" class="button small danger">Delete</button>
                   </form>
                 {% endif %}
@@ -54,7 +50,7 @@
             {% endif %}
           </tr>
         {% else %}
-          <tr><td colspan="7" class="empty">No activities yet.</td></tr>
+          <tr><td colspan="8" class="empty">No activities yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

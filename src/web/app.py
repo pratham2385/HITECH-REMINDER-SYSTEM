@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import json
+import typing
 from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Request, UploadFile, Response
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from src.config.settings import APP_NAME, STATIC_DIR, TEMPLATE_DIR, load_settings
 from src.db.models import (
@@ -46,8 +47,7 @@ from src.utils.logger import setup_logging
 settings = load_settings()
 logger = setup_logging(settings.log_dir)
 app = FastAPI(title=APP_NAME)
-templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
-SESSION_COOKIE = "activity_dashboard_session"
+
 FREQUENCIES = ["Daily", "Monthly", "Quarterly", "Yearly"]
 ROLES = ["owner", "staff", "viewer"]
 
@@ -65,132 +65,27 @@ def startup_event() -> None:
     except ImportError as e:
         logger.error(f"Failed to start scheduler: {e}")
 
-def cell_display(value: object) -> str:
-    """Display a flexible imported cell value."""
+# Templates and helpers imported from app_deps
+from src.web.app_deps import (
+    redirect, current_user, user_context, render, require_login, 
+    require_admin, require_manager, require_editor, redirect_with_msg,
+    get_db, close_db, SESSION_COOKIE, templates
+)
+from src.web.auth_routes import router as auth_router
 
-    if isinstance(value, dict):
-        return str(value.get("value") or "")
-    if value is None:
-        return ""
-    return str(value)
+app.include_router(auth_router)
 
-
-def cell_link(value: object) -> str:
-    """Return a hyperlink target for imported cell values."""
-
-    if isinstance(value, dict):
-        return str(value.get("link") or "")
-    return ""
-
-
-templates.env.filters["cell_display"] = cell_display
-templates.env.filters["cell_link"] = cell_link
-
-
-def get_db() -> Session:
-    """Return a new request-scoped database session."""
-
-    return get_session_factory(settings)()
-
-
-def close_db(db: Session) -> None:
-    """Close a request-scoped database session."""
-
-    db.close()
-
-
-def redirect(path: str) -> RedirectResponse:
-    """Return a standard POST-safe redirect."""
-
-    return RedirectResponse(path, status_code=303)
-
-
-def current_user(request: Request, db: Session) -> User | None:
-    """Return the logged-in user from the signed cookie."""
-
-    cookie_value = request.cookies.get(SESSION_COOKIE)
-    if not cookie_value:
-        return None
-    user_id = verify_session(cookie_value, settings.secret_key)
-    if user_id is None:
-        return None
-    return db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
-
-
-def user_context(user: User | None) -> dict[str, object] | None:
-    """Return a safe template context for a user."""
-
-    if user is None:
-        return None
-    return {
-        "id": user.id,
-        "username": user.username,
-        "display_name": user.display_name,
-        "role": user.role,
-        "is_owner": user.role == "owner",
-        "can_edit": user.role in {"owner", "staff"},
-    }
-
-
-def render(
-    request: Request,
-    template_name: str,
-    context: dict[str, object] | None = None,
-    user: User | None = None,
-) -> HTMLResponse:
-    """Render a dashboard template."""
-
-    payload = {
-        "request": request,
-        "app_name": APP_NAME,
-        "user": user_context(user),
-        "notice": request.query_params.get("notice", ""),
-        "error": request.query_params.get("error", ""),
-    }
-    if context:
-        payload.update(context)
-    return templates.TemplateResponse(template_name, payload)
-
-
-def require_login(request: Request, db: Session) -> User | Response:
-    user = current_user(request, db)
-    if user is None:
-        return redirect("/login")
-    return user
-
-
-def require_owner(request: Request, db: Session) -> User | Response:
-    user = require_login(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
-    if user.role != "owner":
-        return redirect("/dashboard?error=Owner access required")
-    return user
-
-
-def require_editor(request: Request, db: Session) -> User | Response:
-    user = require_login(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
-    if user.role not in {"owner", "staff"}:
-        return redirect("/dashboard?error=Edit access required")
-    return user
-
-
-def parse_json_values(record: ModuleDataRecord) -> dict[str, object]:
+def parse_json_values(record) -> dict[str, object]:
     """Parse a module row JSON payload."""
-
     try:
         values = json.loads(record.values_json)
     except json.JSONDecodeError:
         return {}
     return values if isinstance(values, dict) else {}
 
-
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> RedirectResponse:
     """Redirect to the dashboard or login."""
-
     db = get_db()
     try:
         user = current_user(request, db)
@@ -199,44 +94,8 @@ def home(request: Request) -> RedirectResponse:
         close_db(db)
 
 
-@app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request) -> HTMLResponse:
-    return render(request, "login.html")
-
-
-@app.post("/login")
-def login_submit(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = db.query(User).filter(User.username == username.strip(), User.is_active.is_(True)).first()
-        if user is None or not verify_password(password, user.password_hash):
-            return redirect("/login?error=Invalid username or password")
-        response = redirect("/dashboard")
-        response.set_cookie(
-            SESSION_COOKIE,
-            sign_session(user.id, settings.secret_key),
-            httponly=True,
-            samesite="lax",
-            max_age=60 * 60 * 12,
-        )
-        return response
-    finally:
-        close_db(db)
-
-
-@app.post("/logout")
-def logout() -> RedirectResponse:
-    response = redirect("/login?notice=Logged out")
-    response.delete_cookie(SESSION_COOKIE)
-    return response
-
-
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request) -> Response:
+def dashboard(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -277,7 +136,7 @@ def dashboard(request: Request) -> Response:
 
 
 @app.get("/activities", response_class=HTMLResponse)
-def activities(request: Request) -> Response:
+def activities(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -285,7 +144,6 @@ def activities(request: Request) -> Response:
             return user
         rows = (
             db.query(ActivityRecord)
-            .options(joinedload(ActivityRecord.assignee), joinedload(ActivityRecord.linked_module))
             .filter(ActivityRecord.is_active.is_(True))
             .order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc())
             .all()
@@ -296,17 +154,18 @@ def activities(request: Request) -> Response:
 
 
 @app.get("/activities/new", response_class=HTMLResponse)
-def activity_new(request: Request) -> Response:
+def activity_new(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_editor(request, db)
         if isinstance(user, RedirectResponse):
             return user
         modules = db.query(Module).order_by(Module.name.asc()).all()
+        users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
         return render(
             request,
             "activity_form.html",
-            {"activity": None, "modules": modules, "frequencies": FREQUENCIES},
+            {"activity": None, "modules": modules, "users": users, "frequencies": FREQUENCIES},
             user,
         )
     finally:
@@ -323,6 +182,7 @@ def activity_create(
     status: str = Form(""),
     remark: str = Form(""),
     linked_module_id: str = Form(""),
+    assigned_user_id: str = Form(""),
 ) -> RedirectResponse:
     db = get_db()
     try:
@@ -339,6 +199,7 @@ def activity_create(
                 status=status.strip(),
                 remark=remark.strip(),
                 linked_module_id=int(linked_module_id) if linked_module_id else None,
+                assigned_user_id=int(assigned_user_id) if assigned_user_id else None,
                 sort_order=sort_order,
                 is_active=True,
             )
@@ -350,7 +211,7 @@ def activity_create(
 
 
 @app.get("/activities/{activity_id}/edit", response_class=HTMLResponse)
-def activity_edit(request: Request, activity_id: int) -> Response:
+def activity_edit(request: Request, activity_id: int) -> typing.Any:
     db = get_db()
     try:
         user = require_editor(request, db)
@@ -360,10 +221,11 @@ def activity_edit(request: Request, activity_id: int) -> Response:
         if activity is None:
             return redirect("/activities?error=Activity not found")
         modules = db.query(Module).order_by(Module.name.asc()).all()
+        users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
         return render(
             request,
             "activity_form.html",
-            {"activity": activity, "modules": modules, "frequencies": FREQUENCIES},
+            {"activity": activity, "modules": modules, "users": users, "frequencies": FREQUENCIES},
             user,
         )
     finally:
@@ -381,6 +243,7 @@ def activity_update(
     status: str = Form(""),
     remark: str = Form(""),
     linked_module_id: str = Form(""),
+    assigned_user_id: str = Form(""),
 ) -> RedirectResponse:
     db = get_db()
     try:
@@ -397,6 +260,7 @@ def activity_update(
         row.status = status.strip()
         row.remark = remark.strip()
         row.linked_module_id = int(linked_module_id) if linked_module_id else None
+        row.assigned_user_id = int(assigned_user_id) if assigned_user_id else None
         db.commit()
         return redirect("/activities?notice=Activity updated")
     finally:
@@ -407,7 +271,7 @@ def activity_update(
 def activity_delete(request: Request, activity_id: int) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         row = db.query(ActivityRecord).filter(ActivityRecord.id == activity_id).first()
@@ -419,8 +283,45 @@ def activity_delete(request: Request, activity_id: int) -> RedirectResponse:
         close_db(db)
 
 
+@app.post("/activities/{activity_id}/send-reminder")
+def activity_send_reminder(request: Request, activity_id: int) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_login(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+            
+        activity = db.query(ActivityRecord).filter(ActivityRecord.id == activity_id).first()
+        if not activity:
+            return redirect("/activities?error=Activity not found")
+            
+        from src.services.reminder_service import send_daily_reminders
+        from src.services.activity_service import activity_record_to_domain
+        from src.email.email_template import EmailTemplate
+        from src.email.email_sender import GmailEmailSender
+        from src.services.settings_service import effective_settings
+        
+        active_settings = effective_settings(db, settings)
+        domain_act = activity_record_to_domain(activity)
+        
+        target_email = domain_act.assigned_user_email or active_settings.recipient_email.split(",")[0]
+        if not target_email:
+            return redirect("/activities?error=No target email configured.")
+            
+        email_content = EmailTemplate.build(target_email, [domain_act], date.today())
+        email_result = GmailEmailSender(active_settings, logger).send(email_content)
+        
+        if email_result.success:
+            return redirect("/activities?notice=Reminder sent successfully!")
+        else:
+            return redirect(f"/activities?error=Failed to send: {email_result.message}")
+            
+    finally:
+        close_db(db)
+
+
 @app.get("/modules", response_class=HTMLResponse)
-def modules(request: Request) -> Response:
+def modules(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -433,7 +334,7 @@ def modules(request: Request) -> Response:
 
 
 @app.get("/modules/{module_id}", response_class=HTMLResponse)
-def module_detail(request: Request, module_id: int) -> Response:
+def module_detail(request: Request, module_id: int) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -523,7 +424,7 @@ def module_delete_row(request: Request, module_id: int, record_id: int) -> Redir
 def module_delete(request: Request, module_id: int) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         module = db.query(Module).filter(Module.id == module_id).first()
@@ -536,7 +437,7 @@ def module_delete(request: Request, module_id: int) -> RedirectResponse:
 
 
 @app.get("/imports", response_class=HTMLResponse)
-def imports(request: Request) -> Response:
+def imports(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -549,7 +450,7 @@ def imports(request: Request) -> Response:
 
 
 @app.get("/imports/new", response_class=HTMLResponse)
-def import_new(request: Request) -> Response:
+def import_new(request: Request) -> typing.Any:
     db = get_db()
     try:
         user = require_editor(request, db)
@@ -588,7 +489,7 @@ async def import_upload(request: Request, workbook: UploadFile = File(...)) -> R
 
 
 @app.get("/imports/{import_id}", response_class=HTMLResponse)
-def import_detail(request: Request, import_id: int) -> Response:
+def import_detail(request: Request, import_id: int) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -637,10 +538,10 @@ def import_confirm(
 
 
 @app.get("/settings/email", response_class=HTMLResponse)
-def email_settings(request: Request) -> Response:
+def email_settings(request: Request) -> typing.Any:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         active = effective_settings(db, settings)
@@ -663,7 +564,7 @@ def email_settings_save(
 ) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         set_setting(db, "EMAIL_ADDRESS", email_address.strip())
@@ -677,10 +578,10 @@ def email_settings_save(
 
 
 @app.get("/settings/whatsapp", response_class=HTMLResponse)
-def whatsapp_settings(request: Request) -> Response:
+def whatsapp_settings(request: Request) -> typing.Any:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         active = effective_settings(db, settings)
@@ -707,7 +608,7 @@ def whatsapp_settings_save(
 ) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         set_setting(db, "WHATSAPP_ENABLED", "true" if whatsapp_enabled == "true" else "false")
@@ -725,7 +626,7 @@ def whatsapp_settings_save(
 
 
 @app.get("/reminders/preview", response_class=HTMLResponse)
-def reminders_preview(request: Request, preview_date: str = None) -> Response:
+def reminders_preview(request: Request, preview_date: str = None) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
@@ -742,11 +643,11 @@ def reminders_preview(request: Request, preview_date: str = None) -> Response:
         # We must pass the target_date to the service methods.
         # But wait, build_preview_content currently calls get_due_domain_activities(session, logger, run_date)
         # We need to make sure the service method is updated as well.
-        # It's already in reminder_service.py as build_preview_email(session, logger, run_date)
+        # It's already in reminder_service.py as build_preview_content(session, logger, run_date)
         
-        from src.services.reminder_service import get_due_domain_activities, build_preview_email
+        from src.services.reminder_service import get_due_domain_activities, build_preview_content
         due_activities = get_due_domain_activities(db, logger, target_date)
-        content = build_preview_email(db, logger, target_date)
+        content = build_preview_content(db, logger, target_date)
         return render(
             request,
             "reminders_preview.html",
@@ -761,7 +662,7 @@ def reminders_preview(request: Request, preview_date: str = None) -> Response:
 def reminders_send_test_email(request: Request) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         result = send_test_email(db, settings, logger)
@@ -776,133 +677,13 @@ def reminders_send_test_email(request: Request) -> RedirectResponse:
 def reminders_send_test_whatsapp(request: Request) -> RedirectResponse:
     db = get_db()
     try:
-        user = require_owner(request, db)
+        user = require_admin(request, db)
         if isinstance(user, RedirectResponse):
             return user
         result = send_test_whatsapp(db, settings, logger)
         db.commit()
         target = "notice" if result.success else "error"
         return redirect(f"/reminders/preview?{target}={result.message}")
-    finally:
-        close_db(db)
-
-
-@app.get("/users", response_class=HTMLResponse)
-def users(request: Request) -> Response:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        rows = db.query(User).order_by(User.username.asc()).all()
-        return render(request, "users.html", {"users": rows, "roles": ROLES}, user)
-    finally:
-        close_db(db)
-
-
-@app.get("/users/new", response_class=HTMLResponse)
-def user_new(request: Request) -> Response:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        return render(request, "user_form.html", {"account": None, "roles": ROLES}, user)
-    finally:
-        close_db(db)
-
-
-@app.post("/users/new")
-def user_create(
-    request: Request,
-    username: str = Form(...),
-    display_name: str = Form(...),
-    role: str = Form(...),
-    password: str = Form(...),
-) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        if role not in ROLES:
-            return redirect("/users/new?error=Invalid role")
-        if db.query(User).filter(User.username == username.strip()).first():
-            return redirect("/users/new?error=Username already exists")
-        db.add(
-            User(
-                username=username.strip(),
-                display_name=display_name.strip(),
-                role=role,
-                password_hash=hash_password(password),
-                is_active=True,
-            )
-        )
-        db.commit()
-        return redirect("/users?notice=User created")
-    finally:
-        close_db(db)
-
-
-@app.get("/users/{user_id}/edit", response_class=HTMLResponse)
-def user_edit(request: Request, user_id: int) -> Response:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        account = db.query(User).filter(User.id == user_id).first()
-        if account is None:
-            return redirect("/users?error=User not found")
-        return render(request, "user_form.html", {"account": account, "roles": ROLES}, user)
-    finally:
-        close_db(db)
-
-
-@app.post("/users/{user_id}/edit")
-def user_update(
-    request: Request,
-    user_id: int,
-    username: str = Form(...),
-    display_name: str = Form(...),
-    role: str = Form(...),
-    password: str = Form(""),
-    is_active: str = Form("false"),
-) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        account = db.query(User).filter(User.id == user_id).first()
-        if account is None:
-            return redirect("/users?error=User not found")
-        account.username = username.strip()
-        account.display_name = display_name.strip()
-        account.role = role if role in ROLES else account.role
-        account.is_active = is_active == "true"
-        if password.strip():
-            account.password_hash = hash_password(password)
-        db.commit()
-        return redirect("/users?notice=User updated")
-    finally:
-        close_db(db)
-
-@app.post("/users/{user_id}/delete")
-def user_delete(request: Request, user_id: int) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_owner(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        if user.id == user_id:
-            return redirect("/users?error=You cannot delete your own account")
-        account = db.query(User).filter(User.id == user_id).first()
-        if account is None:
-            return redirect("/users?error=User not found")
-        account.is_active = False
-        db.commit()
-        return redirect("/users?notice=User deleted")
     finally:
         close_db(db)
 

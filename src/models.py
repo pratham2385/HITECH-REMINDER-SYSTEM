@@ -14,11 +14,8 @@ class Activity:
     frequency: str
     date_value: Any
     row_number: int
-    assignee_email: str | None = None
-    assignee_phone: str | None = None
-    assignee_name: str | None = None
-    email_enabled: bool = True
-    whatsapp_enabled: bool = True
+    assigned_user_email: str | None = None
+    assigned_user_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

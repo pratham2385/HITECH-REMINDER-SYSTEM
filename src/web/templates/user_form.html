@@ -9,6 +9,7 @@
 
 <section class="panel">
   <form method="post" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>
       Username
       <input type="text" name="username" value="{{ account.username if account else '' }}" required>

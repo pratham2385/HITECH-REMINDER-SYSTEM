@@ -20,11 +20,8 @@ def activity_record_to_domain(record: ActivityRecord) -> Activity:
         frequency=record.frequency,
         date_value=record.date_value,
         row_number=record.id,
-        assignee_email=record.assignee.username if record.assignee else None,
-        assignee_phone=record.assignee.phone if record.assignee else None,
-        assignee_name=record.assignee.display_name if record.assignee else "Unassigned",
-        email_enabled=record.email_enabled,
-        whatsapp_enabled=record.whatsapp_enabled,
+        assigned_user_email=record.assigned_user.email if record.assigned_user else None,
+        assigned_user_name=record.assigned_user.display_name if record.assigned_user else None,
     )
 
 

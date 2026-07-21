@@ -1,17 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="auth-panel">
-  <h1>Dashboard Login</h1>
+<section class="auth-panel" style="max-width: 400px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <h1 style="text-align: center; margin-bottom: 20px;">Dashboard Login</h1>
   <form method="post" action="/login" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>
-      Username
-      <input type="text" name="username" autocomplete="username" required>
+      Email Address
+      <input type="email" name="email" autocomplete="username" required style="width: 100%; padding: 8px; margin-top: 5px;">
     </label>
     <label>
       Password
-      <input type="password" name="password" autocomplete="current-password" required>
+      <input type="password" name="password" id="login-password" autocomplete="current-password" required style="width: 100%; padding: 8px; margin-top: 5px;">
     </label>
-    <button type="submit" class="button primary">Login</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -10px; margin-bottom: 10px;">
+      <label style="font-weight: normal; font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" name="remember" value="true"> Remember Me
+      </label>
+      <a href="/forgot-password" style="font-size: 0.9em; text-decoration: none;">Forgot Password?</a>
+    </div>
+    <button type="button" onclick="const p = document.getElementById('login-password'); p.type = p.type === 'password' ? 'text' : 'password';" style="background: none; border: none; color: #666; cursor: pointer; text-align: right; font-size: 0.8em; margin-top: -15px;">Show/Hide Password</button>
+    
+    <button type="submit" class="button primary" style="width: 100%; padding: 10px;">Login</button>
+    <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
+      Don't have an account? <a href="/signup">Sign up</a>
+    </p>
   </form>
 </section>
 {% endblock %}
