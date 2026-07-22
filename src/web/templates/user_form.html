@@ -3,21 +3,28 @@
 <section class="page-heading">
   <div>
     <h1>Edit User</h1>
-    <p>Manage dashboard role access.</p>
+    <p>Manage user details and dashboard access.</p>
   </div>
 </section>
 
-<section class="panel">
+<section class="panel" style="max-width: 800px;">
+  <div class="panel-head">
+    <h2>User Profile</h2>
+  </div>
   <form method="post" class="form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    
     <label>
-      Username / Email
-      <input type="text" name="username" value="{{ account.username }}" required>
+      Email Address
+      <input type="email" name="username" value="{{ account.username }}" required>
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; display: block; margin-top: 4px;">Used for login and notifications.</span>
     </label>
+    
     <label>
       Display Name
       <input type="text" name="display_name" value="{{ account.display_name }}" required>
     </label>
+    
     <label>
       Role
       <select name="role">
@@ -25,20 +32,29 @@
           <option value="{{ role }}" {% if account.role == role %}selected{% endif %}>{{ role|title }}</option>
         {% endfor %}
       </select>
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; display: block; margin-top: 4px;">Controls access level to the dashboard.</span>
     </label>
-      <label class="check-row">
-        <input type="checkbox" name="is_active" value="true" {% if account.is_active %}checked{% endif %}>
-        Active
-      </label>
-    <label class="span-2">
+    
+    <label>
       Password
       <input type="password" name="password" placeholder="Leave blank to keep current password">
     </label>
-    <div class="form-actions">
-      <button type="submit" class="button primary">Save User</button>
+
+    <div class="span-2" style="margin-top: 12px; padding-top: 16px; border-top: 1px dashed var(--border-color);">
+      <label class="check-row" style="font-size: 1rem; color: var(--text-main);">
+        <input type="checkbox" name="is_active" value="true" {% if account.is_active %}checked{% endif %}>
+        Account is Active
+      </label>
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; display: block; margin-left: 32px; margin-top: 4px;">If unchecked, the user will not be able to log in.</span>
+    </div>
+
+    <div class="form-actions span-2" style="margin-top: 12px;">
+      <button type="submit" class="button primary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+        Save Changes
+      </button>
       <a href="/users" class="button ghost">Cancel</a>
     </div>
   </form>
 </section>
 {% endblock %}
-

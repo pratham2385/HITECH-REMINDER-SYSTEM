@@ -3,58 +3,133 @@
 <section class="page-heading">
   <div>
     <h1>Activities</h1>
-    <p>Reminder source for email and WhatsApp.</p>
+    <p>Manage notification schedules for emails and WhatsApp.</p>
   </div>
-  {% if user.can_edit %}
-    <a href="/activities/new" class="button primary">Add Activity</a>
-  {% endif %}
+  <div style="display: flex; gap: 12px; align-items: center;">
+    {% if user.can_edit %}
+      <a href="/activities/new" class="button primary">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        Add Activity
+      </a>
+    {% endif %}
+  </div>
 </section>
 
 <section class="panel">
+  <div class="filter-bar" style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px; position: relative;">
+      <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; left: 12px; top: 11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <input type="text" id="activity-search" placeholder="Search activities by name or module..." style="padding-left: 36px; max-width: 400px;">
+    </div>
+    <select id="activity-freq-filter" style="width: 180px;">
+      <option value="all">All Frequencies</option>
+      <option value="one time">One Time</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="quarterly">Quarterly</option>
+      <option value="half-yearly">Half-Yearly</option>
+      <option value="yearly">Yearly</option>
+    </select>
+  </div>
+
   <div class="table-wrap">
-    <table>
+    <table class="data-table" id="activities-table">
       <thead>
         <tr>
-          <th>Activity</th>
-          <th>Frequency</th>
-          <th>Date Rule</th>
-          <th>Status</th>
-          <th>Module</th>
-          <th>Assigned User</th>
-          <th>Remark</th>
-          {% if user.can_edit %}<th>Actions</th>{% endif %}
+          <th>Activity Details</th>
+          <th>Frequency & Schedule</th>
+          <th>Module Link</th>
+          <th>Assignment</th>
+          <th style="text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for item in activities %}
-          <tr>
-            <td>{{ item.activity }}</td>
-            <td>{{ item.frequency }}</td>
-            <td>{{ item.date_value or "" }}</td>
-            <td>{{ item.status or "" }}</td>
-            <td>{% if item.linked_module %}<a href="/modules/{{ item.linked_module.id }}">{{ item.linked_module.name }}</a>{% else %}{{ item.link or "" }}{% endif %}</td>
-            <td>{{ item.assigned_user.display_name if item.assigned_user else "None (Global)" }}</td>
-            <td>{{ item.remark or "" }}</td>
-            {% if user.can_edit %}
-              <td class="actions">
-                <form method="post" action="/activities/{{ item.id }}/send-reminder" style="display:inline-block; margin-right: 4px;">
-                  <button type="submit" class="button small">Send Now</button>
-                </form>
-                <a href="/activities/{{ item.id }}/edit" class="button small">Edit</a>
-                {% if user.is_owner %}
-                  <form method="post" action="/activities/{{ item.id }}/delete" style="display:inline-block;">
-                    <button type="submit" class="button small danger">Delete</button>
-                  </form>
+          <tr class="activity-row" data-freq="{{ item.frequency|lower }}" data-search="{{ item.activity|lower }} {% if item.linked_module %}{{ item.linked_module.name|lower }}{% endif %}">
+            <td>
+              <div style="display: flex; flex-direction: column;">
+                <strong style="color: var(--text-main);">{{ item.activity }}</strong>
+                {% if item.status %}
+                  <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                    <span class="pulse" style="display:inline-block; width:6px; height:6px; margin-right:4px; {% if item.status|lower == 'done' %}background:var(--text-muted); box-shadow:none; animation:none;{% endif %}"></span>
+                    {{ item.status }}
+                  </span>
                 {% endif %}
-              </td>
-            {% endif %}
+              </div>
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                <span class="status-badge" style="background: var(--primary-light); color: var(--primary);">{{ item.frequency }}</span>
+                {% if item.date_value %}
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">{{ item.date_value }}</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if item.linked_module %}
+                <a href="/modules/{{ item.linked_module.id }}" class="button small ghost" style="padding:4px 8px;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                  {{ item.linked_module.name }}
+                </a>
+              {% else %}
+                <span style="color: var(--text-muted); font-size: 0.875rem;">None</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.assigned_user %}
+                <span style="font-size: 0.875rem; color: var(--text-main);">{{ item.assigned_user.display_name }}</span>
+              {% else %}
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Global (None)</span>
+              {% endif %}
+            </td>
+            
+            <td>
+              <div class="actions" style="justify-content: flex-end;">
+                {% if user.can_edit %}
+                  <!-- Send Now -->
+                  <form method="post" action="/activities/{{ item.id }}/send-reminder" style="margin: 0;">
+                    <button type="submit" class="button small ghost" style="color: #0ea5e9;" title="Send Reminder Now">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                  </form>
+                  
+                  <!-- Edit -->
+                  <a href="/activities/{{ item.id }}/edit" class="button small ghost" title="Edit Activity">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  </a>
+                  
+                  <!-- Delete -->
+                  {% if user.is_owner %}
+                    <form method="post" action="/activities/{{ item.id }}/delete" style="margin: 0;">
+                      <button type="submit" class="button small ghost" style="color: var(--danger);" title="Delete Activity" onclick="return confirm('Delete this activity permanently?');">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                      </button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </td>
           </tr>
-        {% else %}
-          <tr><td colspan="8" class="empty">No activities yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    
+    <div id="activities-empty-state" class="empty state-card" style="display: none; border: none;">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+      <p>No activities match your filters.</p>
+      <button type="button" class="button small ghost" id="clear-act-filters-btn" style="margin-top:12px;">Clear Filters</button>
+    </div>
+
+    {% if not activities %}
+      <div class="empty state-card" style="border: none;">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        <p>No activities have been created yet.</p>
+        {% if user.can_edit %}
+          <a href="/activities/new" class="button small primary" style="margin-top:12px;">Create First Activity</a>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 </section>
 {% endblock %}
-

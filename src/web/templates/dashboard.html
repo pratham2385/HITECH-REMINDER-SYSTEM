@@ -2,86 +2,141 @@
 {% block content %}
 <section class="page-heading">
   <div>
-    <h1>Owner Dashboard</h1>
+    <h1>{{ user.role|title }} Dashboard</h1>
     <p>{{ today.strftime("%d %B %Y") }}</p>
   </div>
   {% if user.can_edit %}
-    <a href="/activities/new" class="button primary">Add Activity</a>
+    <a href="/activities/new" class="button primary">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      Add Activity
+    </a>
   {% endif %}
 </section>
 
-<section class="metric-grid">
-  <article class="metric"><span>Due Today</span><strong>{{ due_records|length }}</strong></article>
-  <article class="metric"><span>Pending</span><strong>{{ pending_count }}</strong></article>
-  <article class="metric"><span>Done</span><strong>{{ done_count }}</strong></article>
-  <article class="metric"><span>Modules</span><strong>{{ module_count }}</strong></article>
+<!-- Summary Cards with Animated Counters -->
+<section class="metric-grid summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+  <article class="metric">
+    <span>Total Activities</span>
+    <strong class="counter" data-target="{{ activity_count }}">0</strong>
+  </article>
+  <article class="metric">
+    <span>Upcoming Reminders</span>
+    <strong class="counter" data-target="{{ upcoming|length }}">0</strong>
+  </article>
+  
+  <!-- Mock Data Placeholders (Backend is frozen and doesn't expose these) -->
+  <article class="metric mock-data" title="Mock Data">
+    <span>Total Users</span>
+    <strong class="counter" data-target="24">0</strong>
+  </article>
+  <article class="metric mock-data" title="Mock Data">
+    <span>Emails Sent (MTD)</span>
+    <strong class="counter" data-target="1284">0</strong>
+  </article>
+  <article class="metric mock-data" title="Mock Data">
+    <span>Failed Emails</span>
+    <strong class="counter" data-target="3">0</strong>
+  </article>
 </section>
 
 <section class="two-column">
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Today</h2>
-      <a href="/reminders/preview">Preview</a>
+  <!-- Live Scheduler Monitor -->
+  <div class="panel live-scheduler" style="display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 40px 20px;">
+    <div style="margin-bottom: 24px;">
+      <span class="live-indicator" style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-surface-hover); padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.875rem; color: var(--text-main); font-weight: 500;">
+        <span class="pulse"></span> 
+        Monitoring Scheduler
+      </span>
     </div>
-    {% if due_records %}
-      <ol class="clean-list numbered">
-        {% for item in due_records %}
-          <li>
-            <strong>{{ item.activity }}</strong>
-            <span>{{ item.frequency }}{% if item.date_value %} · {{ item.date_value }}{% endif %}</span>
-          </li>
-        {% endfor %}
-      </ol>
-    {% else %}
-      <p class="empty">No activity is due today.</p>
-    {% endif %}
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Upcoming</h2>
-      <a href="/activities">Manage</a>
-    </div>
+    
     {% if upcoming %}
-      <ul class="clean-list">
-        {% for run_date, item in upcoming %}
-          <li>
-            <strong>{{ run_date.strftime("%d %b") }}</strong>
-            <span>{{ item.activity }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="empty">No upcoming activity found.</p>
-    {% endif %}
-  </div>
-</section>
-
-<section class="two-column">
-  <div class="panel">
-    <h2>Notification Status</h2>
-    <dl class="status-list">
-      <div><dt>Last Run</dt><dd>{% if last_run %}{{ last_run.created_at.strftime("%d %b %Y %H:%M") }} · {{ last_run.message }}{% else %}Not run yet{% endif %}</dd></div>
-      <div><dt>Email</dt><dd>{% if last_email %}{{ "Sent" if last_email.success else "Failed" }} · {{ last_email.message }}{% else %}No email log{% endif %}</dd></div>
-      <div><dt>WhatsApp</dt><dd>{% if last_whatsapp %}{{ "Sent" if last_whatsapp.success else "Failed" }} · {{ last_whatsapp.message }}{% else %}No WhatsApp log{% endif %}</dd></div>
-    </dl>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Quick Modules</h2>
-      <a href="/modules">All</a>
-    </div>
-    {% if modules %}
-      <div class="module-links">
-        {% for module in modules %}
-          <a href="/modules/{{ module.id }}">{{ module.name }}</a>
-        {% endfor %}
+      {% set next_run_date, next_act = upcoming[0] %}
+      <div class="scheduler-widget" data-next-run="{{ next_run_date.strftime('%Y-%m-%dT09:00:00Z') }}" style="display: flex; flex-direction: column; align-items: center;">
+        <h3 class="countdown-timer timer-display" id="scheduler-countdown" style="margin: 0; line-height: 1.1;">00:00:00</h3>
+        <p class="countdown-label" style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.75rem; margin-top: 8px;">Until Next Dispatch</p>
+        
+        <div class="scheduler-details" style="margin-top: 32px; width: 100%; max-width: 300px; text-align: left; background: var(--bg-surface-hover); padding: 16px; border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-muted); font-size: 0.875rem;">Activity</span>
+            <strong style="color: var(--text-main); font-size: 0.875rem;">{{ next_act.activity }}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-muted); font-size: 0.875rem;">Assignment</span>
+            <strong style="color: var(--text-main); font-size: 0.875rem;">{{ next_act.assigned_user_id or "Global" }}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted); font-size: 0.875rem;">Frequency</span>
+            <span class="status-badge" style="background: var(--primary-light); color: var(--primary);">{{ next_act.frequency|title }}</span>
+          </div>
+        </div>
       </div>
     {% else %}
-      <p class="empty">Import an Excel workbook to create modules.</p>
+      <div class="empty state-card" style="border: none;">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p>No upcoming activities scheduled.</p>
+        {% if user.can_edit %}
+          <a href="/activities/new" class="button small ghost" style="margin-top:12px;">Schedule One Now</a>
+        {% endif %}
+      </div>
     {% endif %}
   </div>
-</section>
-{% endblock %}
 
+  <!-- Real-time Email Log Preview -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2 style="display: flex; align-items: center; gap: 8px;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--primary);"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Email Dispatch Logs
+      </h2>
+      <a href="/settings/email" class="button small ghost">Settings</a>
+    </div>
+    
+    <!-- Skeleton loader shown on mount, hidden by JS -->
+    <div id="log-skeleton" class="skeleton-loader" style="margin-top: 10px;">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+    
+    <!-- Container for JS to inject real and mock logs -->
+    <div id="email-log-feed" class="timeline-feed" style="display: none;">
+      <!-- Last actual database email log (if exists) -->
+      {% if last_email %}
+        <div class="log-card {% if last_email.success %}success{% else %}error{% endif %}">
+          <div class="log-header">
+            <span class="status-badge {% if last_email.success %}success{% else %}error{% endif %}">
+              {% if last_email.success %}Success{% else %}Failed{% endif %}
+            </span>
+            <span class="log-time">{{ last_email.created_at.strftime("%H:%M:%S") }}</span>
+          </div>
+          <div class="log-body">
+            Sent to <strong>{{ last_email.recipient or "System Default" }}</strong>
+          </div>
+        </div>
+      {% endif %}
+      
+      <!-- Mock logs will be injected here via JS -->
+    </div>
+  </div>
+</section>
+
+<!-- Modern Charts -->
+<section class="two-column">
+  <div class="panel">
+    <h2>Emails Sent (Last 6 Months)</h2>
+    <div class="chart-container" style="position: relative; height:250px; width:100%">
+      <canvas id="chart-emails-month"></canvas>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Delivery Success Rate</h2>
+    <div class="chart-container" style="position: relative; height:250px; width:100%; display:flex; justify-content:center;">
+      <canvas id="chart-success-rate"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% endblock %}

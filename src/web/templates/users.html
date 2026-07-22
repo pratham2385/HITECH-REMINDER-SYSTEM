@@ -1,62 +1,121 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="content-header">
-  <h1>User Management</h1>
-</div>
+<section class="page-heading">
+  <div>
+    <h1>User Management</h1>
+    <p>Manage system users, roles, and access.</p>
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <a href="/signup" class="button primary">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      Add User
+    </a>
+  </div>
+</section>
 
-<section class="card">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td>{{ u.display_name }}</td>
-        <td>{{ u.email }}</td>
-        <td><span class="badge">{{ u.role|title }}</span></td>
-        <td>
-          {% if u.is_active %}
-            <span class="badge" style="background: #e6f4ea; color: #137333;">Active</span>
-          {% else %}
-            <span class="badge" style="background: #fce8e6; color: #c5221f;">Inactive</span>
-          {% endif %}
-        </td>
-        <td>
-          <a href="/users/{{ u.id }}/edit" class="button ghost">Edit</a>
-          
-          <form method="post" action="/users/{{ u.id }}/verify" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            {% if u.email_verified %}
-              <button type="submit" class="button ghost" style="color: #666;" title="Mark as unverified">Unverify</button>
-            {% else %}
-              <button type="submit" class="button ghost" style="color: #0b5394;" title="Mark as verified">Verify</button>
-            {% endif %}
-          </form>
+<section class="panel">
+  <div class="filter-bar" style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px; position: relative;">
+      <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; left: 12px; top: 11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <input type="text" id="user-search" placeholder="Search users by name or email..." style="padding-left: 36px; max-width: 400px;">
+    </div>
+    <select id="user-role-filter" style="width: 150px;">
+      <option value="all">All Roles</option>
+      <option value="owner">Owner</option>
+      <option value="manager">Manager</option>
+      <option value="viewer">Viewer</option>
+    </select>
+  </div>
 
-          <form method="post" action="/users/{{ u.id }}/toggle" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            {% if u.is_active %}
-              <button type="submit" class="button ghost" style="color: #c5221f;">Deactivate</button>
-            {% else %}
-              <button type="submit" class="button ghost" style="color: #137333;">Activate</button>
-            {% endif %}
-          </form>
+  <div class="table-wrap">
+    <table class="data-table" id="users-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="user-row" data-role="{{ u.role|lower }}" data-search="{{ u.display_name|lower }} {{ u.email|lower }}">
+          <td>
+            <div style="display: flex; flex-direction: column;">
+              <strong style="color: var(--text-main);">{{ u.display_name }}</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">{{ u.email }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge" style="background: var(--bg-surface-hover); color: var(--text-main);">{{ u.role|title }}</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              {% if u.is_active %}
+                <span class="status-badge success">Active</span>
+              {% else %}
+                <span class="status-badge error">Inactive</span>
+              {% endif %}
+              
+              {% if u.email_verified %}
+                <span class="status-badge" style="background: #e0f2fe; color: #0369a1;">Verified</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="actions" style="justify-content: flex-end;">
+              
+              <!-- Verify / Unverify -->
+              <form method="post" action="/users/{{ u.id }}/verify" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% if u.email_verified %}
+                  <button type="submit" class="button small ghost" title="Unverify User">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </button>
+                {% else %}
+                  <button type="submit" class="button small ghost" style="color: #0ea5e9;" title="Verify User">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </button>
+                {% endif %}
+              </form>
 
-          <form method="post" action="/users/{{ u.id }}/delete" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button type="submit" class="button ghost" style="color: #c5221f;" onclick="return confirm('Delete this user permanently?');">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+              <!-- Activate / Deactivate -->
+              <form method="post" action="/users/{{ u.id }}/toggle" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% if u.is_active %}
+                  <button type="submit" class="button small ghost" style="color: var(--warning);" title="Deactivate">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </button>
+                {% else %}
+                  <button type="submit" class="button small ghost" style="color: var(--success);" title="Activate">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </button>
+                {% endif %}
+              </form>
+
+              <a href="/users/{{ u.id }}/edit" class="button small ghost" title="Edit">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </a>
+              
+              <form method="post" action="/users/{{ u.id }}/delete" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="button small ghost" style="color: var(--danger);" title="Delete" onclick="return confirm('Delete this user permanently?');">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </form>
+
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    <div id="users-empty-state" class="empty state-card" style="display: none; border: none;">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+      <p>No users match your filters.</p>
+      <button type="button" class="button small ghost" id="clear-filters-btn" style="margin-top:12px;">Clear Filters</button>
+    </div>
+  </div>
 </section>
 {% endblock %}

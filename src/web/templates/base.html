@@ -4,44 +4,129 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ app_name }}</title>
+  
+  <!-- Modern Font (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="{{ request.url_for('static', path='styles.css') }}">
+  <script>
+    // Execute immediately to prevent theme flash
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/dashboard">{{ app_name }}</a>
-    {% if user %}
-      <nav class="nav">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/activities">Activities</a>
-        <a href="/modules">Modules</a>
-        <a href="/imports">Imports</a>
-        <a href="/reminders/preview">Reminders</a>
-        {% if user.is_owner %}
-          <a href="/settings/email">Email</a>
-          <a href="/settings/whatsapp">WhatsApp</a>
-          <a href="/users">Users</a>
-        {% endif %}
-      </nav>
-      <form action="/logout" method="post" class="logout-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <a href="/profile" style="margin-right: 15px; text-decoration: none; font-weight: 500;">{{ user.display_name }} ({{ user.role|title }})</a>
-        <button type="submit" class="button ghost">Logout</button>
-      </form>
-    {% endif %}
-  </header>
 
-  <main class="page">
+  <!-- Toast Container -->
+  <div class="alert-container">
     {% if success %}
-      <div class="alert success">{{ success }}</div>
+      <div class="alert success">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+        <span>{{ success }}</span>
+      </div>
     {% endif %}
     {% if notice %}
-      <div class="alert notice">{{ notice }}</div>
+      <div class="alert notice">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>{{ notice }}</span>
+      </div>
     {% endif %}
     {% if error %}
-      <div class="alert error">{{ error }}</div>
+      <div class="alert error">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>{{ error }}</span>
+      </div>
     {% endif %}
-    {% block content %}{% endblock %}
-  </main>
+  </div>
+
+  <div class="app-shell">
+    
+    <!-- Sidebar -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <a class="sidebar-brand" href="/dashboard">{{ app_name }}</a>
+        <button id="sidebar-close" aria-label="Close sidebar">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      
+      <div class="sidebar-nav">
+        {% if user %}
+          <div class="sidebar-nav-heading">Main Menu</div>
+          <a href="/dashboard">Dashboard</a>
+          <a href="/activities">Activities</a>
+          <a href="/modules">Modules</a>
+          <a href="/imports">Imports</a>
+          <a href="/reminders/preview">Reminders</a>
+          
+          {% if user.is_owner %}
+            <div class="sidebar-nav-heading">Administration</div>
+            <a href="/settings/email">Email Settings</a>
+            <a href="/settings/whatsapp">WhatsApp Settings</a>
+            <a href="/users">User Management</a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- Sidebar Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main Content Wrapper -->
+    <div class="app-content-wrapper">
+      
+      <!-- Top Navbar -->
+      <header class="app-navbar">
+        <div class="navbar-left">
+          <button id="sidebar-toggle" aria-label="Toggle sidebar">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+        </div>
+        
+        <div class="navbar-right">
+          <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+            <!-- Sun/Moon Icon -->
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+          </button>
+          
+          {% if user %}
+            <div class="user-profile-menu">
+              <a href="/profile" class="user-name">{{ user.display_name }} ({{ user.role|title }})</a>
+              <form action="/logout" method="post" class="logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="button small ghost">Logout</button>
+              </form>
+            </div>
+          {% else %}
+            <div class="user-profile-menu">
+              <a href="/login" class="button small ghost">Login</a>
+              <a href="/signup" class="button small primary">Signup</a>
+            </div>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <div class="page">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+      
+    </div>
+  </div>
+
+  <script src="{{ request.url_for('static', path='js/app.js') }}"></script>
 </body>
 </html>
-
