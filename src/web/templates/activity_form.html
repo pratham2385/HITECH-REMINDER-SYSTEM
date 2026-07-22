@@ -22,8 +22,73 @@
       </select>
     </label>
     <label>
-      Date Rule
-      <input type="text" name="date_value" value="{{ activity.date_value if activity else '' }}" placeholder="7, 20, July month, Last day of the month">
+      Timezone
+      <select name="timezone" required>
+        <option value="UTC" {% if activity and activity.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+        <option value="Asia/Kolkata" {% if activity and activity.timezone == 'Asia/Kolkata' %}selected{% endif %}>Asia/Kolkata (IST)</option>
+        <option value="America/New_York" {% if activity and activity.timezone == 'America/New_York' %}selected{% endif %}>America/New_York (EST)</option>
+      </select>
+    </label>
+    <label>
+      Send Time (HH:MM)
+      <input type="time" name="send_time" value="{{ activity.send_time if activity else '09:00' }}" required>
+    </label>
+    <label>
+      Day of Week
+      <select name="day_of_week" id="input_day">
+        <option value="">None</option>
+        {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        <option value="{{ day }}" {% if activity and activity.day_of_week == day %}selected{% endif %}>{{ day }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Day of Month (1-31)
+      <input type="number" id="input_date" name="day_of_month" value="{{ activity.day_of_month if activity else '' }}" min="1" max="31">
+    </label>
+    <label>
+      Month of Year
+      <select name="month_of_year" id="input_month">
+        <option value="">None</option>
+        {% set months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+        {% for i in range(12) %}
+          <option value="{{ i + 1 }}" {% if activity and activity.month_of_year == i + 1 %}selected{% endif %}>{{ months[i] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Year
+      <input type="number" id="input_year" name="year" value="{{ activity.year if activity else '' }}" min="2020" max="2050" placeholder="e.g. 2026">
+    </label>
+    <label>
+      Quarter Months
+      <select name="quarter_months" multiple style="height: 100px;">
+        {% set q_months = (activity.quarter_months.split(',') if activity and activity.quarter_months else []) %}
+        {% set months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+        {% for i in range(12) %}
+          <option value="{{ i + 1 }}" {% if (i + 1)|string in q_months %}selected{% endif %}>{{ months[i] }}</option>
+        {% endfor %}
+      </select>
+      <small style="display:block; margin-top:4px;">Hold Ctrl/Cmd to select multiple</small>
+    </label>
+    <label>
+      Date Handling Strategy
+      <select name="date_handling_strategy">
+        <option value="exact" {% if activity and activity.date_handling_strategy == 'exact' %}selected{% endif %}>Exact Date</option>
+        <option value="last_valid_day" {% if activity and activity.date_handling_strategy == 'last_valid_day' %}selected{% endif %}>Last Valid Day (e.g. Feb 28)</option>
+      </select>
+    </label>
+    <label>
+      Custom Email Subject
+      <input type="text" name="email_subject_template" value="{{ activity.email_subject_template if activity else '' }}" placeholder="Reminder: {{ '{{activity_name}}' }}">
+    </label>
+    <label class="span-2">
+      Custom Email Body (Markdown/Text)
+      <textarea name="email_body_template" rows="4" placeholder="Hello {{ '{{user_name}}' }},\n\nReminder for {{ '{{activity_name}}' }}">{{ activity.email_body_template if activity else '' }}</textarea>
+    </label>
+    <label style="display:none;">
+      Legacy Date Rule (Optional)
+      <input type="text" name="date_value" value="{{ activity.date_value if activity else '' }}" placeholder="7, 20, July month">
     </label>
     <label>
       Linked Module
@@ -61,5 +126,72 @@
     </div>
   </form>
 </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const dayInput = document.getElementById("input_day");
+    const dateInput = document.getElementById("input_date");
+    const monthInput = document.getElementById("input_month");
+    const yearInput = document.getElementById("input_year");
+    const form = document.querySelector("form");
+
+    function syncDayOfWeek() {
+        const d = parseInt(dateInput.value);
+        const m = parseInt(monthInput.value);
+        const y = parseInt(yearInput.value);
+
+        if (d && m && y) {
+            // Check if valid date
+            const dateObj = new Date(y, m - 1, d);
+            // JS Date rolls over (e.g. Feb 29 2027 becomes Mar 1 2027). So we verify it matches:
+            if (dateObj.getFullYear() === y && dateObj.getMonth() === m - 1 && dateObj.getDate() === d) {
+                // It's a valid date.
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayName = days[dateObj.getDay()];
+                
+                // Auto-sync if mismatch, or if empty
+                if (dayInput.value !== dayName) {
+                    dayInput.value = dayName;
+                }
+                
+                dateInput.setCustomValidity("");
+            } else {
+                // Invalid date like 29 Feb 2027 or 31 April
+                dateInput.setCustomValidity("Invalid calendar date (e.g. 31 April or 29 Feb in non-leap year).");
+            }
+        } else {
+            dateInput.setCustomValidity("");
+        }
+    }
+
+    dateInput.addEventListener("input", syncDayOfWeek);
+    monthInput.addEventListener("change", syncDayOfWeek);
+    yearInput.addEventListener("input", syncDayOfWeek);
+    
+    // Check if user manually changes day to wrong day
+    dayInput.addEventListener("change", function() {
+        const d = parseInt(dateInput.value);
+        const m = parseInt(monthInput.value);
+        const y = parseInt(yearInput.value);
+        if (d && m && y) {
+             const dateObj = new Date(y, m - 1, d);
+             if (dateObj.getFullYear() === y && dateObj.getMonth() === m - 1 && dateObj.getDate() === d) {
+                 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                 const dayName = days[dateObj.getDay()];
+                 if (dayInput.value && dayInput.value !== dayName) {
+                     dayInput.setCustomValidity("Selected day does not match the selected date (" + dayName + ").");
+                 } else {
+                     dayInput.setCustomValidity("");
+                 }
+             }
+        } else {
+            dayInput.setCustomValidity("");
+        }
+    });
+    
+    // Initial sync
+    syncDayOfWeek();
+});
+</script>
 {% endblock %}
 

@@ -98,11 +98,12 @@ def start_scheduler() -> None:
     if scheduler.running:
         return
         
-    # Schedule the daily reminder dispatch to run at 8:00 AM every day
+    # Schedule the reminder dispatch to run every minute
+    from apscheduler.triggers.interval import IntervalTrigger
     scheduler.add_job(
         dispatch_reminders_job,
-        trigger=CronTrigger(hour=8, minute=0),
-        id="daily_reminders",
+        trigger=IntervalTrigger(minutes=1),
+        id="daily_reminders", # Keeping the ID to avoid breaking existing setups, though it's now per-minute
         replace_existing=True,
     )
     

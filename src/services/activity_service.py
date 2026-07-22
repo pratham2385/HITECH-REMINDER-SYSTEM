@@ -28,19 +28,21 @@ def activity_record_to_domain(record: ActivityRecord) -> Activity:
 
 def get_due_activity_records(
     session: Session,
-    run_date: date,
     logger: logging.Logger,
+    now_utc: datetime | None = None
 ) -> list[ActivityRecord]:
-    """Return active database activities due on `run_date`."""
-
-    checker = ScheduleChecker(logger)
+    """Return active database activities whose next_run_at is due."""
+    from datetime import datetime
+    
+    now = now_utc or datetime.utcnow()
     records = (
         session.query(ActivityRecord)
         .filter(ActivityRecord.is_active.is_(True))
+        .filter(ActivityRecord.next_run_at <= now)
         .order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc())
         .all()
     )
-    return [record for record in records if checker.is_due(activity_record_to_domain(record), run_date)]
+    return records
 
 
 def get_upcoming_activity_records(
@@ -51,13 +53,18 @@ def get_upcoming_activity_records(
     limit: int = 20,
 ) -> list[tuple[date, ActivityRecord]]:
     """Return upcoming activity occurrences for dashboard display."""
-
-    upcoming: list[tuple[date, ActivityRecord]] = []
-    for offset in range(days + 1):
-        run_date = start_date + timedelta(days=offset)
-        for record in get_due_activity_records(session, run_date, logger):
-            upcoming.append((run_date, record))
-            if len(upcoming) >= limit:
-                return upcoming
-    return upcoming
+    from datetime import datetime, timedelta
+    
+    end_date = datetime.utcnow() + timedelta(days=days)
+    records = (
+        session.query(ActivityRecord)
+        .filter(ActivityRecord.is_active.is_(True))
+        .filter(ActivityRecord.next_run_at != None)
+        .filter(ActivityRecord.next_run_at <= end_date)
+        .order_by(ActivityRecord.next_run_at.asc())
+        .limit(limit)
+        .all()
+    )
+    
+    return [(r.next_run_at.date(), r) for r in records if r.next_run_at]
 

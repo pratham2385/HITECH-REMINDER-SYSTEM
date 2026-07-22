@@ -103,7 +103,7 @@ def dashboard(request: Request) -> typing.Any:
             return user
 
         today = date.today()
-        due_records = get_due_activity_records(db, today, logger)
+        due_records = get_due_activity_records(db, logger)
         upcoming = get_upcoming_activity_records(db, today, logger, days=30, limit=12)
         activities = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True)).all()
         pending_count = sum(1 for row in activities if (row.status or "").strip().casefold() != "done")
@@ -183,6 +183,16 @@ def activity_create(
     remark: str = Form(""),
     linked_module_id: str = Form(""),
     assigned_user_id: str = Form(""),
+    timezone: str = Form("UTC"),
+    send_time: str = Form("09:00"),
+    day_of_week: str = Form(""),
+    day_of_month: str = Form(""),
+    month_of_year: str = Form(""),
+    year: str = Form(""),
+    quarter_months: typing.List[str] = Form(default=[]),
+    date_handling_strategy: str = Form("exact"),
+    email_subject_template: str = Form(""),
+    email_body_template: str = Form(""),
 ) -> RedirectResponse:
     db = get_db()
     try:
@@ -190,6 +200,45 @@ def activity_create(
         if isinstance(user, RedirectResponse):
             return user
         sort_order = db.query(ActivityRecord).count() + 1
+        from src.scheduler.scheduler_engine import get_next_run_time
+        from datetime import datetime
+        now = datetime.utcnow()
+        
+        day_of_month_int = int(day_of_month) if day_of_month else None
+        month_of_year_int = int(month_of_year) if month_of_year else None
+        year_int = int(year) if year else None
+        quarter_months_str = ",".join(quarter_months) if quarter_months else None
+        
+        # Strict Calendar Validation
+        if day_of_month_int and month_of_year_int and year_int:
+            from datetime import date
+            try:
+                # This will raise ValueError for e.g. 31 April or 29 Feb 2027
+                validated_date = date(year_int, month_of_year_int, day_of_month_int)
+                computed_day = validated_date.strftime("%A")
+                
+                if day_of_week and day_of_week.strip().lower() != computed_day.lower():
+                    # Return error if user selected wrong day
+                    return redirect(f"/activities?error=Selected day ({day_of_week}) does not match the date ({validated_date.strftime('%d %B %Y')}, which is a {computed_day}).")
+                
+                # Auto-populate day of week if left empty
+                day_of_week = computed_day
+            except ValueError as e:
+                return redirect(f"/activities?error=Invalid calendar date: {e}")
+        
+        next_run = get_next_run_time(
+            frequency=frequency.strip(),
+            timezone_str=timezone.strip(),
+            send_time_str=send_time.strip(),
+            day_of_week=day_of_week.strip() if day_of_week else None,
+            day_of_month=day_of_month_int,
+            month_of_year=month_of_year_int,
+            year=year_int,
+            quarter_months=quarter_months_str,
+            date_handling_strategy=date_handling_strategy.strip(),
+            from_time_utc=now
+        )
+        
         db.add(
             ActivityRecord(
                 activity=activity.strip(),
@@ -200,6 +249,17 @@ def activity_create(
                 remark=remark.strip(),
                 linked_module_id=int(linked_module_id) if linked_module_id else None,
                 assigned_user_id=int(assigned_user_id) if assigned_user_id else None,
+                timezone=timezone.strip(),
+                send_time=send_time.strip(),
+                day_of_week=day_of_week.strip() if day_of_week else None,
+                day_of_month=day_of_month_int,
+                month_of_year=month_of_year_int,
+                year=year_int,
+                quarter_months=quarter_months_str,
+                date_handling_strategy=date_handling_strategy.strip(),
+                email_subject_template=email_subject_template.strip() if email_subject_template else None,
+                email_body_template=email_body_template.strip() if email_body_template else None,
+                next_run_at=next_run,
                 sort_order=sort_order,
                 is_active=True,
             )
@@ -244,6 +304,16 @@ def activity_update(
     remark: str = Form(""),
     linked_module_id: str = Form(""),
     assigned_user_id: str = Form(""),
+    timezone: str = Form("UTC"),
+    send_time: str = Form("09:00"),
+    day_of_week: str = Form(""),
+    day_of_month: str = Form(""),
+    month_of_year: str = Form(""),
+    year: str = Form(""),
+    quarter_months: typing.List[str] = Form(default=[]),
+    date_handling_strategy: str = Form("exact"),
+    email_subject_template: str = Form(""),
+    email_body_template: str = Form(""),
 ) -> RedirectResponse:
     db = get_db()
     try:
@@ -261,6 +331,56 @@ def activity_update(
         row.remark = remark.strip()
         row.linked_module_id = int(linked_module_id) if linked_module_id else None
         row.assigned_user_id = int(assigned_user_id) if assigned_user_id else None
+        
+        day_of_month_int = int(day_of_month) if day_of_month else None
+        month_of_year_int = int(month_of_year) if month_of_year else None
+        year_int = int(year) if year else None
+        quarter_months_str = ",".join(quarter_months) if quarter_months else None
+        
+        # Strict Calendar Validation
+        if day_of_month_int and month_of_year_int and year_int:
+            from datetime import date
+            try:
+                # This will raise ValueError for e.g. 31 April or 29 Feb 2027
+                validated_date = date(year_int, month_of_year_int, day_of_month_int)
+                computed_day = validated_date.strftime("%A")
+                
+                if day_of_week and day_of_week.strip().lower() != computed_day.lower():
+                    # Return error if user selected wrong day
+                    return redirect(f"/activities?error=Selected day ({day_of_week}) does not match the date ({validated_date.strftime('%d %B %Y')}, which is a {computed_day}).")
+                
+                # Auto-populate day of week if left empty
+                day_of_week = computed_day
+            except ValueError as e:
+                return redirect(f"/activities?error=Invalid calendar date: {e}")
+                
+        row.timezone = timezone.strip()
+        row.send_time = send_time.strip()
+        row.day_of_week = day_of_week.strip() if day_of_week else None
+        row.day_of_month = day_of_month_int
+        row.month_of_year = month_of_year_int
+        row.year = year_int
+        row.quarter_months = quarter_months_str
+        row.date_handling_strategy = date_handling_strategy.strip()
+        row.email_subject_template = email_subject_template.strip() if email_subject_template else None
+        row.email_body_template = email_body_template.strip() if email_body_template else None
+        
+        from src.scheduler.scheduler_engine import get_next_run_time
+        from datetime import datetime
+        now = datetime.utcnow()
+        row.next_run_at = get_next_run_time(
+            frequency=row.frequency,
+            timezone_str=row.timezone,
+            send_time_str=row.send_time,
+            day_of_week=row.day_of_week,
+            day_of_month=row.day_of_month,
+            month_of_year=row.month_of_year,
+            year=row.year,
+            quarter_months=row.quarter_months,
+            date_handling_strategy=row.date_handling_strategy,
+            from_time_utc=now
+        )
+        
         db.commit()
         return redirect("/activities?notice=Activity updated")
     finally:

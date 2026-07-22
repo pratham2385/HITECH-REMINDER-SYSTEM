@@ -46,6 +46,26 @@ class ActivityRecord(Base):
     link = Column(String(255), nullable=True)
     status = Column(String(50), nullable=True)
     remark = Column(Text, nullable=True)
+
+    # Advanced Scheduling Fields
+    timezone = Column(String(50), nullable=False, default="UTC")
+    send_time = Column(String(5), nullable=False, default="09:00") # HH:MM
+    day_of_week = Column(String(20), nullable=True) # e.g., 'Monday'
+    day_of_month = Column(Integer, nullable=True) # 1-31
+    month_of_year = Column(Integer, nullable=True) # 1-12
+    year = Column(Integer, nullable=True) # e.g. 2026
+    quarter_months = Column(String(50), nullable=True) # e.g., '1,4,7,10'
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    last_run_at = Column(DateTime, nullable=True) # Stored in UTC
+    next_run_at = Column(DateTime, nullable=True, index=True) # Stored in UTC
+    date_handling_strategy = Column(String(20), nullable=False, default="exact") # 'exact', 'last_valid_day'
+    missed_execution_strategy = Column(String(20), nullable=False, default="skip") # 'skip', 'send_immediate'
+
+    # Email Customization
+    email_subject_template = Column(String(255), nullable=True)
+    email_body_template = Column(Text, nullable=True)
+
     linked_module_id = Column(Integer, ForeignKey("modules.id", ondelete="SET NULL"), nullable=True)
     assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)

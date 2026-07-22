@@ -31,46 +31,57 @@ class ReminderDispatchResult:
 def get_due_domain_activities(
     session: Session,
     logger: logging.Logger,
-    run_date: date | None = None,
+    now_utc: datetime | None = None,
 ) -> list[Activity]:
     """Return due activities as scheduler/email domain objects."""
 
-    effective_date = run_date or date.today()
     return [
         activity_record_to_domain(record)
-        for record in get_due_activity_records(session, effective_date, logger)
+        for record in get_due_activity_records(session, logger, now_utc)
     ]
 
 
 def build_preview_content(
     session: Session,
     logger: logging.Logger,
-    run_date: date | None = None,
+    now_utc: datetime | None = None,
 ) -> EmailContent | None:
     """Build today's reminder email content without sending it."""
 
-    due_activities = get_due_domain_activities(session, logger, run_date)
+    due_activities = get_due_domain_activities(session, logger, now_utc)
     if not due_activities:
         return None
-    return EmailTemplate.build("Preview Mode (Assigned Users)", due_activities, run_date or date.today())
+    return EmailTemplate.build("Preview Mode (Assigned Users)", due_activities, date.today())
 
 
 def send_daily_reminders(
     session: Session,
     settings: Settings,
     logger: logging.Logger,
-    run_date: date | None = None,
+    now_utc: datetime | None = None,
 ) -> ReminderDispatchResult:
     """Send today's email and WhatsApp reminders from database activities."""
 
-    effective_date = run_date or date.today()
+    from datetime import datetime
+    now = now_utc or datetime.utcnow()
     active_settings = effective_settings(session, settings)
-    due_activities = get_due_domain_activities(session, logger, effective_date)
+    
+    # We fetch records directly so we can mutate next_run_at and last_run_at
+    records = get_due_activity_records(session, logger, now)
+    if not records:
+        return ReminderDispatchResult(
+            activity_count=0,
+            email_result=None,
+            whatsapp_result=None,
+            message="No activities due right now.",
+        )
+        
+    due_activities = [activity_record_to_domain(r) for r in records]
 
     from src.db.models import ReminderRun, User
 
     reminder_run = ReminderRun(
-        run_date=effective_date.isoformat(),
+        run_date=now.isoformat(),
         activity_count=len(due_activities),
         email_status="not_sent",
         whatsapp_status="not_sent",
@@ -87,50 +98,80 @@ def send_daily_reminders(
             message=reminder_run.message,
         )
 
-    from collections import defaultdict
-    user_activities = defaultdict(list)
-    
     # All active and verified users should receive reminders for unassigned activities (global)
     active_users = session.query(User).filter(User.is_active == True, User.email_verified == True).all()
     verified_emails = {u.email for u in active_users if u.email}
     global_recipients = list(verified_emails)
 
-    for act in due_activities:
-        if act.assigned_user_email:
-            if act.assigned_user_email in verified_emails:
-                user_activities[act.assigned_user_email].append(act)
-            else:
-                logger.info(
-                    "Activity: %s | Assigned User: %s | Result: Skipped (User not verified or inactive)",
-                    act.activity,
-                    act.assigned_user_email
-                )
-        else:
-            user_activities["__global__"].append(act)
-    
     all_email_success = True
     messages = []
     
-    for user_email, activities in user_activities.items():
-        recipients = global_recipients if user_email == "__global__" else [user_email]
-        email_content = EmailTemplate.build(recipients, activities, effective_date)
+    from jinja2 import Template
+    from src.models import EmailContent
+
+    for act_domain in due_activities:
+        # Find the matching DB record to access custom templates
+        record = next((r for r in records if r.id == act_domain.row_number), None)
+        
+        if act_domain.assigned_user_email:
+            if act_domain.assigned_user_email in verified_emails:
+                recipients = [act_domain.assigned_user_email]
+            else:
+                logger.info(
+                    "Activity: %s | Assigned User: %s | Result: Skipped (User not verified or inactive)",
+                    act_domain.activity,
+                    act_domain.assigned_user_email
+                )
+                continue
+        else:
+            recipients = global_recipients
+            
+        # Default templates
+        subject = f"Reminder: {act_domain.activity}"
+        body = f"Hello,\\n\\nThis is a reminder for the activity: {act_domain.activity}.\\nDue date: {now.date()}\\n\\nRegards,\\nHITECH Reminder System"
+        
+        # Override with custom templates if provided
+        if record and record.email_subject_template:
+            subject = Template(record.email_subject_template).render(
+                user_name=act_domain.assigned_user_name or "User",
+                user_email=act_domain.assigned_user_email or "",
+                activity_name=act_domain.activity,
+                frequency=act_domain.frequency,
+                due_date=str(now.date()),
+                current_date=str(now.date())
+            )
+            
+        if record and record.email_body_template:
+            body = Template(record.email_body_template).render(
+                user_name=act_domain.assigned_user_name or "User",
+                user_email=act_domain.assigned_user_email or "",
+                activity_name=act_domain.activity,
+                frequency=act_domain.frequency,
+                due_date=str(now.date()),
+                current_date=str(now.date())
+            )
+            # Replace newlines with <br> for HTML email
+            body = body.replace("\\n", "<br>")
+        else:
+            # If no custom body template, we can still use the global EmailTemplate builder for a nice HTML table
+            email_content = EmailTemplate.build(recipients, [act_domain], now.date())
+            body = email_content.body
+            subject = email_content.subject
+
+        email_content = EmailContent(recipient=recipients, subject=subject, body=body)
         email_result = GmailEmailSender(active_settings, logger).send(email_content)
         
-        # Temporary logs
-        for act in activities:
-            logger.info(
-                "Activity: %s | Assigned User ID: %s | Assigned User Email: %s | Recipient Used: %s | SMTP Recipient: %s | Result: %s",
-                act.activity,
-                act.assigned_user_id if hasattr(act, 'assigned_user_id') else 'None',
-                act.assigned_user_email,
-                user_email,
-                ", ".join(recipients) if isinstance(recipients, list) else recipients,
-                "Success" if email_result.success else "Failure"
-            )
+        logger.info(
+            "Activity: %s | Assigned User Email: %s | SMTP Recipient: %s | Result: %s",
+            act_domain.activity,
+            act_domain.assigned_user_email,
+            ", ".join(recipients) if isinstance(recipients, list) else recipients,
+            "Success" if email_result.success else "Failure"
+        )
 
         if not email_result.success:
             all_email_success = False
-        messages.append(f"{user_email}: {email_result.message}")
+        messages.append(f"{act_domain.activity}: {email_result.message}")
         
         session.add(
             EmailLog(
@@ -148,7 +189,7 @@ def send_daily_reminders(
     if active_settings.whatsapp_enabled:
         whatsapp_result = WhatsAppSender(active_settings, logger).send_activity_reminder(
             due_activities,
-            effective_date,
+            now.date(),
         )
         reminder_run.whatsapp_status = "sent" if whatsapp_result.success else "failed"
         session.add(
@@ -165,6 +206,28 @@ def send_daily_reminders(
         reminder_run.whatsapp_status = "disabled"
 
     aggregated_email_result = EmailSendResult(success=all_email_success, message=" | ".join(messages))
+
+    # Update database records with last_run_at and calculate next_run_at
+    from src.scheduler.scheduler_engine import get_next_run_time
+    from datetime import timedelta
+    
+    for record in records:
+        record.last_run_at = now
+        # Calculate the next run time starting from exactly 1 minute in the future
+        # so it doesn't immediately match the same minute again
+        next_calc_start = now + timedelta(minutes=1)
+        record.next_run_at = get_next_run_time(
+            frequency=record.frequency,
+            timezone_str=record.timezone,
+            send_time_str=record.send_time,
+            day_of_week=record.day_of_week,
+            day_of_month=record.day_of_month,
+            month_of_year=record.month_of_year,
+            year=record.year,
+            quarter_months=record.quarter_months,
+            date_handling_strategy=record.date_handling_strategy,
+            from_time_utc=next_calc_start
+        )
 
     reminder_run.message = "Reminder run completed."
     session.flush()
@@ -231,23 +294,7 @@ def retry_failed_notifications(
     settings: Settings,
     logger: logging.Logger,
 ) -> None:
-    """Check if today's reminders failed or haven't been sent, and dispatch them."""
-    from src.db.models import ReminderRun
-    from sqlalchemy import and_
-    
-    today_iso = date.today().isoformat()
-    # Check if a completely successful run already exists today
-    successful_run = session.query(ReminderRun).filter(
-        and_(
-            ReminderRun.run_date == today_iso,
-            ReminderRun.email_status == "sent",
-            ReminderRun.whatsapp_status.in_(["sent", "disabled"])
-        )
-    ).first()
-    
-    if not successful_run:
-        logger.info("No completely successful reminder run found for today. Attempting to dispatch/retry.")
-        send_daily_reminders(session, settings, logger)
-    else:
-        logger.info("Reminders for today were already completely successfully sent.")
+    """Deprecated: The new per-minute scheduler handles retries via missed_execution_strategy."""
+    logger.info("retry_failed_notifications is deprecated. The per-minute scheduler engine handles execution reliability natively.")
+    pass
 
