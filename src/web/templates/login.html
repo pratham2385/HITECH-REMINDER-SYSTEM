@@ -1,41 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="auth-panel" style="max-width: 400px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-  <h1 style="text-align: center; margin-bottom: 20px;">Dashboard Login</h1>
-  <form method="post" action="/login" class="form-grid">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>
-      Email Address
-      <input type="email" name="email" autocomplete="username" required style="width: 100%; padding: 8px; margin-top: 5px;">
-    </label>
-    <label>
-      Password
-      <input type="password" name="password" id="login-password" autocomplete="current-password" required style="width: 100%; padding: 8px; margin-top: 5px;">
-    </label>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -10px; margin-bottom: 10px;">
-      <label style="font-weight: normal; font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
-        <input type="checkbox" name="remember" value="true"> Remember Me
-      </label>
-      <a href="/forgot-password" style="font-size: 0.9em; text-decoration: none;">Forgot Password?</a>
-    </div>
-    <button type="button" onclick="const p = document.getElementById('login-password'); p.type = p.type === 'password' ? 'text' : 'password';" style="background: none; border: none; color: #666; cursor: pointer; text-align: right; font-size: 0.8em; margin-top: -15px;">Show/Hide Password</button>
-    
-    <button type="submit" class="button primary" style="width: 100%; padding: 10px;">Login</button>
-    <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
-      Don't have an account? <a href="/signup">Sign up</a>
-    </p>
-  </form>
+<link rel="stylesheet" href="{{ request.url_for('static', path='auth.css') }}">
 
-  {% if unverified_email %}
-  <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
-    <p style="margin-bottom: 10px; font-size: 0.9em; color: #666;">Didn't receive the verification email?</p>
-    <form method="post" action="/resend-verification">
+<!-- Fullscreen overlay covering the standard app shell -->
+<div class="premium-auth-layout">
+  <section class="premium-auth-card">
+    <div class="auth-header">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+      </svg>
+      <h1>Welcome to <br><span class="text-gradient">HITECH Reminder System</span></h1>
+      <p>Enter your details to access your dashboard</p>
+    </div>
+
+    <form method="post" action="/login" class="auth-form-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="email" value="{{ unverified_email }}">
-      <button type="submit" class="button" style="width: 100%; padding: 10px; background: #f0f0f0; color: #333;">Resend Verification Email</button>
+      
+      <div class="auth-input-group">
+        <label for="email">Email Address</label>
+        <div class="auth-input-wrapper">
+          <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          <input type="email" id="email" name="email" autocomplete="username" required placeholder="you@example.com">
+        </div>
+      </div>
+      
+      <div class="auth-input-group">
+        <label for="login-password">Password</label>
+        <div class="auth-input-wrapper">
+          <svg class="icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          <input type="password" name="password" id="login-password" autocomplete="current-password" required placeholder="••••••••">
+          <button type="button" class="auth-password-toggle" onclick="const p = document.getElementById('login-password'); p.type = p.type === 'password' ? 'text' : 'password';" aria-label="Toggle password visibility">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="auth-options">
+        <label>
+          <input type="checkbox" name="remember" value="true"> Remember me
+        </label>
+        <a href="/forgot-password">Forgot password?</a>
+      </div>
+      
+      <button type="submit" class="auth-submit-btn">
+        Login
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+      </button>
     </form>
-  </div>
-  {% endif %}
-</section>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="/signup">Sign up</a>
+    </div>
+
+    {% if unverified_email %}
+    <div class="auth-verification">
+      <p>Didn't receive the verification email?</p>
+      <form method="post" action="/resend-verification">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="email" value="{{ unverified_email }}">
+        <button type="submit">Resend Verification Email</button>
+      </form>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+  // Enable full screen immersive auth mode by attaching class to body
+  document.body.classList.add('auth-page');
+</script>
 {% endblock %}
 
