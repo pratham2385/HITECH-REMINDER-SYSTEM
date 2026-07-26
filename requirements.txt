@@ -1,0 +1,12 @@
+pandas
+openpyxl
+python-dotenv
+fastapi
+uvicorn[standard]
+sqlalchemy
+jinja2
+python-multipart
+alembic
+apscheduler
+watchdog
+pytest

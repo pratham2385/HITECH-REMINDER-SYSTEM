@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Import Excel</h1>
+    <p>Preview workbook sheets before adding them to the dashboard.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post" action="/imports/new" enctype="multipart/form-data" class="form-grid">
+    <label class="span-2">
+      Workbook
+      <input type="file" name="workbook" accept=".xlsx" required>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="button primary">Upload & Preview</button>
+      <a href="/imports" class="button ghost">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+

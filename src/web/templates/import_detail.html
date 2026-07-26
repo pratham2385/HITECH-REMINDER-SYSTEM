@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>{{ import_record.original_filename }}</h1>
+    <p>{{ import_record.status|title }} · {{ import_record.sheet_count }} sheets · {{ import_record.row_count }} rows</p>
+  </div>
+  <a href="/imports" class="button ghost">Back</a>
+</section>
+
+{% if preview %}
+  <section class="panel">
+    <form method="post" action="/imports/{{ import_record.id }}/confirm" class="toolbar">
+      <label class="check-row">
+        <input type="checkbox" name="import_activity_sheets" value="yes" checked>
+        Import activity-like sheets into reminders
+      </label>
+      <button type="submit" class="button primary">Confirm Import</button>
+    </form>
+  </section>
+
+  {% for sheet in preview.sheets %}
+    <section class="panel">
+      <div class="panel-head">
+        <h2>{{ sheet.name }}</h2>
+        <span>{{ sheet.row_count }} rows · {{ sheet.columns|length }} columns{% if sheet.is_activity_like %} · Activity sheet{% endif %}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {% for column in sheet.columns %}
+                <th>{{ column }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in sheet.sample_rows %}
+              <tr>
+                {% for column in sheet.columns %}
+                  {% set raw_value = row.get(column) %}
+                  <td>{{ raw_value|cell_display }}</td>
+                {% endfor %}
+              </tr>
+            {% else %}
+              <tr><td colspan="{{ sheet.columns|length or 1 }}" class="empty">No sample rows.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endfor %}
+{% else %}
+  <section class="panel">
+    <h2>Imported Sheets</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sheet</th><th>Rows</th><th>Columns</th><th>Module</th></tr></thead>
+        <tbody>
+          {% for sheet in import_record.sheets %}
+            <tr>
+              <td>{{ sheet.sheet_name }}</td>
+              <td>{{ sheet.row_count }}</td>
+              <td>{{ sheet.column_count }}</td>
+              <td>{% if sheet.module %}<a href="/modules/{{ sheet.module.id }}">{{ sheet.module.name }}</a>{% endif %}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="empty">No sheet records.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-header" style="max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+  <h1>My Profile</h1>
+</div>
+
+<section class="card" style="max-width: 600px; margin: 20px auto; padding: 20px;">
+  <h2>Account Details</h2>
+  <div style="margin-top: 10px;">
+    <p><strong>Name:</strong> {{ user.display_name }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Role:</strong> <span class="badge">{{ user.role|title }}</span></p>
+  </div>
+  
+  <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
+  
+  <h2>Change Password</h2>
+  <form method="post" action="/profile/password" class="form-grid" style="margin-top: 15px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>
+      Current Password
+      <input type="password" name="current_password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+    </label>
+    <label>
+      New Password
+      <input type="password" name="new_password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+    </label>
+    <label>
+      Confirm New Password
+      <input type="password" name="confirm_password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+    </label>
+    <button type="submit" class="button primary" style="margin-top: 10px;">Update Password</button>
+  </form>
+</section>
+{% endblock %}

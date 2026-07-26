@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>WhatsApp Settings</h1>
+    <p>Official WhatsApp Business Cloud API configuration.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post" class="form-grid">
+    <label class="check-row span-2">
+      <input type="checkbox" name="whatsapp_enabled" value="true" {% if settings.whatsapp_enabled %}checked{% endif %}>
+      Enable WhatsApp reminders
+    </label>
+    <label class="span-2">
+      Access Token {% if masked_token %}<span class="hint">Current: {{ masked_token }}</span>{% endif %}
+      <input type="password" name="whatsapp_access_token" placeholder="Leave blank to keep current token">
+    </label>
+    <label>
+      Phone Number ID
+      <input type="text" name="whatsapp_phone_number_id" value="{{ settings.whatsapp_phone_number_id }}">
+    </label>
+    <label>
+      Recipient Number
+      <input type="text" name="whatsapp_recipient_number" value="{{ settings.whatsapp_recipient_number }}" placeholder="Country code + number">
+    </label>
+    <label>
+      Template Name
+      <input type="text" name="whatsapp_template_name" value="{{ settings.whatsapp_template_name }}">
+    </label>
+    <label>
+      Language Code
+      <input type="text" name="whatsapp_language_code" value="{{ settings.whatsapp_language_code }}">
+    </label>
+    <label class="span-2">
+      Graph API URL
+      <input type="text" name="whatsapp_graph_api_url" value="{{ settings.whatsapp_graph_api_url }}">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="button primary">Save WhatsApp Settings</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+

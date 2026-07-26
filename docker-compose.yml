@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=sqlite:///data/reminders.db
+      - SECRET_KEY=super-secret-key-change-in-production
+      - DASHBOARD_ADMIN_USERNAME=admin
+      - DASHBOARD_ADMIN_PASSWORD=admin
+    restart: unless-stopped

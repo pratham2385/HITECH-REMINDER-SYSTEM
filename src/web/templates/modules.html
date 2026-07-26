@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h1>Modules</h1>
+    <p>Editable pages created from workbook sheets.</p>
+  </div>
+  {% if user.can_edit %}
+    <a href="/imports/new" class="button primary">Import Excel</a>
+  {% endif %}
+</section>
+
+<section class="module-grid">
+  {% for module in modules %}
+    <article class="module-card">
+      <a href="/modules/{{ module.id }}">
+        <strong>{{ module.name }}</strong>
+        <span>{{ module.records|length }} rows · {{ module.fields|length }} columns</span>
+      </a>
+      {% if user.is_owner %}
+        <form method="post" action="/modules/{{ module.id }}/delete">
+          <button type="submit" class="button small danger">Delete</button>
+        </form>
+      {% endif %}
+    </article>
+  {% else %}
+    <p class="empty">No modules yet. Import an Excel workbook to begin.</p>
+  {% endfor %}
+</section>
+{% endblock %}
+
