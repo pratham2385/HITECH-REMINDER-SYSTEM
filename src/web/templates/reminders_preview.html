@@ -33,7 +33,7 @@
   <div class="panel">
     <h2>Email Body</h2>
     {% if content %}
-      <div class="email-preview" style="border: 1px solid #ccc; padding: 1rem; border-radius: 4px; background: white;">{{ content.body | safe }}</div>
+      <div class="email-preview" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; background: var(--bg-surface);">{{ content.body | safe }}</div>
     {% else %}
       <p class="empty">No email or WhatsApp reminder will be sent for this date.</p>
     {% endif %}

@@ -1,23 +1,166 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-heading">
+<style>
+  .import-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    position: relative;
+    padding: 0 16px;
+  }
+  .import-stepper::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: var(--border-color);
+    z-index: 1;
+  }
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+  }
+  .step-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+  }
+  .step-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .step-item.active .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(15, 124, 112, 0.2);
+  }
+  .step-item.active .step-label {
+    color: var(--primary);
+  }
+  .step-item.completed .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  .step-item.completed .step-label {
+    color: var(--text-main);
+  }
+  
+  .upload-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 60px 40px;
+    text-align: center;
+    background: rgba(15, 124, 112, 0.02);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+  .upload-zone:hover {
+    background: rgba(15, 124, 112, 0.05);
+    border-color: var(--primary-light);
+  }
+  .upload-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    color: var(--primary);
+    opacity: 0.8;
+  }
+  .upload-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+  }
+  .upload-desc {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 400px;
+    margin: 0 auto 24px;
+  }
+  .file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .upload-btn {
+    pointer-events: none;
+  }
+</style>
+
+<section class="page-heading" style="margin-bottom: 16px;">
   <div>
-    <h1>Import Excel</h1>
-    <p>Preview workbook sheets before adding them to the dashboard.</p>
+    <h1>Import Workbook</h1>
+    <p>Follow the steps below to import and convert sheets into modules.</p>
   </div>
 </section>
 
-<section class="panel">
-  <form method="post" action="/imports/new" enctype="multipart/form-data" class="form-grid">
-    <label class="span-2">
-      Workbook
-      <input type="file" name="workbook" accept=".xlsx" required>
-    </label>
-    <div class="form-actions">
-      <button type="submit" class="button primary">Upload & Preview</button>
+<!-- Stepper -->
+<div class="import-stepper">
+  <div class="step-item active">
+    <div class="step-circle">1</div>
+    <span class="step-label">Upload</span>
+  </div>
+  <div class="step-item">
+    <div class="step-circle">2</div>
+    <span class="step-label">Validation</span>
+  </div>
+  <div class="step-item">
+    <div class="step-circle">3</div>
+    <span class="step-label">Preview</span>
+  </div>
+  <div class="step-item">
+    <div class="step-circle">4</div>
+    <span class="step-label">Import</span>
+  </div>
+  <div class="step-item">
+    <div class="step-circle">5</div>
+    <span class="step-label">Summary</span>
+  </div>
+</div>
+
+<section class="panel" style="padding: 40px; border-radius: var(--radius-xl); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+  <form method="post" action="/imports/new" enctype="multipart/form-data">
+    <div class="upload-zone">
+      <svg class="upload-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"></path>
+      </svg>
+      <h3 class="upload-title">Choose an Excel file</h3>
+      <p class="upload-desc">Drag and drop your .xlsx workbook here, or click to browse your files.</p>
+      <input type="file" name="workbook" id="workbook" class="file-input" accept=".xlsx" required onchange="document.getElementById('file-name-display').textContent = this.files[0] ? this.files[0].name : 'No file selected'; document.getElementById('submit-upload').disabled = !this.files[0];">
+      <div class="button primary upload-btn" style="box-shadow: 0 4px 12px rgba(15,124,112,0.25);">Select File</div>
+      <p id="file-name-display" style="margin-top: 16px; font-weight: 600; color: var(--primary);"></p>
+    </div>
+    
+    <div class="form-actions" style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 24px;">
       <a href="/imports" class="button ghost">Cancel</a>
+      <button type="submit" id="submit-upload" class="button primary" disabled style="padding: 10px 24px; font-weight: 600;">Next: Validation & Preview &rarr;</button>
     </div>
   </form>
 </section>
 {% endblock %}
-

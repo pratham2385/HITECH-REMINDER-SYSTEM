@@ -1,32 +1,226 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-heading">
+<style>
+  .import-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    position: relative;
+    padding: 0 16px;
+  }
+  .import-stepper::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: var(--border-color);
+    z-index: 1;
+  }
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+  }
+  .step-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+  }
+  .step-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .step-item.active .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(15, 124, 112, 0.2);
+  }
+  .step-item.active .step-label {
+    color: var(--primary);
+  }
+  .step-item.completed .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  .step-item.completed .step-label {
+    color: var(--text-main);
+  }
+  
+  /* Action Box (Validation/Preview) */
+  .action-box {
+    background: rgba(14, 165, 233, 0.05);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    border-left: 4px solid #0ea5e9;
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  /* Spreadsheet styles */
+  .sheet-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  }
+  .sheet-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.02);
+  }
+  .spreadsheet-container {
+    overflow-x: auto;
+    max-height: 400px;
+  }
+  .spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .spreadsheet-table th, .spreadsheet-table td {
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+  .spreadsheet-table th {
+    background: var(--bg-app);
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-top: none;
+  }
+  .spreadsheet-table th:first-child, .spreadsheet-table td:first-child {
+    border-left: none;
+  }
+  .spreadsheet-table th:last-child, .spreadsheet-table td:last-child {
+    border-right: none;
+  }
+  .spreadsheet-table tr:nth-child(even) td {
+    background: rgba(0, 0, 0, 0.015);
+  }
+  .spreadsheet-table tr:hover td {
+    background: rgba(15, 124, 112, 0.05);
+  }
+  
+  /* Summary Card */
+  .summary-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+  }
+  .summary-header {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+  }
+</style>
+
+<section class="page-heading" style="margin-bottom: 16px;">
   <div>
-    <h1>{{ import_record.original_filename }}</h1>
-    <p>{{ import_record.status|title }} · {{ import_record.sheet_count }} sheets · {{ import_record.row_count }} rows</p>
+    <h1>Import Workbook</h1>
+    <p>{{ import_record.original_filename }} &bull; {{ import_record.sheet_count }} sheets &bull; {{ import_record.row_count }} rows</p>
   </div>
-  <a href="/imports" class="button ghost">Back</a>
+  <a href="/imports" class="button ghost">Cancel & Back</a>
 </section>
 
+<!-- Stepper -->
+<div class="import-stepper">
+  <div class="step-item completed">
+    <div class="step-circle"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg></div>
+    <span class="step-label">Upload</span>
+  </div>
+  
+  <div class="step-item {% if preview %}active{% else %}completed{% endif %}">
+    <div class="step-circle">{% if not preview %}<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>{% else %}2{% endif %}</div>
+    <span class="step-label">Validation</span>
+  </div>
+  
+  <div class="step-item {% if preview %}active{% else %}completed{% endif %}">
+    <div class="step-circle">{% if not preview %}<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>{% else %}3{% endif %}</div>
+    <span class="step-label">Preview</span>
+  </div>
+  
+  <div class="step-item {% if not preview %}active{% endif %}">
+    <div class="step-circle">4</div>
+    <span class="step-label">Import</span>
+  </div>
+  
+  <div class="step-item {% if not preview %}active{% endif %}">
+    <div class="step-circle">5</div>
+    <span class="step-label">Summary</span>
+  </div>
+</div>
+
 {% if preview %}
-  <section class="panel">
-    <form method="post" action="/imports/{{ import_record.id }}/confirm" class="toolbar">
-      <label class="check-row">
+  <div class="action-box">
+    <div>
+      <h3 style="margin: 0 0 4px 0; color: #0ea5e9; font-size: 1.1rem;">Validation Complete</h3>
+      <p style="margin: 0; color: var(--text-muted); font-size: 0.95rem;">Please review the sample data below. If everything looks correct, confirm the import.</p>
+    </div>
+    <form method="post" action="/imports/{{ import_record.id }}/confirm" style="margin: 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <label class="check-row" style="font-weight: 600; color: var(--text-main);">
         <input type="checkbox" name="import_activity_sheets" value="yes" checked>
         Import activity-like sheets into reminders
       </label>
-      <button type="submit" class="button primary">Confirm Import</button>
+      <button type="submit" class="button primary" style="box-shadow: 0 4px 12px rgba(15,124,112,0.25); padding: 12px 24px; font-weight: 700;">Confirm Import &rarr;</button>
     </form>
-  </section>
+  </div>
 
   {% for sheet in preview.sheets %}
-    <section class="panel">
-      <div class="panel-head">
-        <h2>{{ sheet.name }}</h2>
-        <span>{{ sheet.row_count }} rows · {{ sheet.columns|length }} columns{% if sheet.is_activity_like %} · Activity sheet{% endif %}</span>
+    <div class="sheet-card">
+      <div class="sheet-header">
+        <h2 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" fill="none" stroke="var(--primary)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          {{ sheet.name }}
+        </h2>
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+          {{ sheet.row_count }} rows &bull; {{ sheet.columns|length }} columns
+          {% if sheet.is_activity_like %}
+            <span style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 2px 8px; border-radius: var(--radius-full); margin-left: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">Activity Sheet</span>
+          {% endif %}
+        </span>
       </div>
-      <div class="table-wrap">
-        <table>
+      <div class="spreadsheet-container">
+        <table class="spreadsheet-table">
           <thead>
             <tr>
               {% for column in sheet.columns %}
@@ -43,34 +237,66 @@
                 {% endfor %}
               </tr>
             {% else %}
-              <tr><td colspan="{{ sheet.columns|length or 1 }}" class="empty">No sample rows.</td></tr>
+              <tr><td colspan="{{ sheet.columns|length or 1 }}" class="empty" style="text-align: center; padding: 32px; color: var(--text-muted);">No sample rows to preview.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   {% endfor %}
 {% else %}
-  <section class="panel">
-    <h2>Imported Sheets</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Sheet</th><th>Rows</th><th>Columns</th><th>Module</th></tr></thead>
-        <tbody>
-          {% for sheet in import_record.sheets %}
-            <tr>
-              <td>{{ sheet.sheet_name }}</td>
-              <td>{{ sheet.row_count }}</td>
-              <td>{{ sheet.column_count }}</td>
-              <td>{% if sheet.module %}<a href="/modules/{{ sheet.module.id }}">{{ sheet.module.name }}</a>{% endif %}</td>
-            </tr>
-          {% else %}
-            <tr><td colspan="4" class="empty">No sheet records.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="summary-card">
+    <div class="summary-header">
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: #10b981; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+      </div>
+      <div>
+        <h2 style="margin: 0 0 4px 0; color: #047857; font-size: 1.25rem;">Import Successful!</h2>
+        <p style="margin: 0; color: rgba(4, 120, 87, 0.8); font-weight: 500;">Your workbook sheets have been converted into modules.</p>
+      </div>
     </div>
-  </section>
+    
+    <div style="padding: 32px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; color: var(--text-main);">Imported Sheets</h3>
+      <div class="table-wrap" style="border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead style="background: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+            <tr>
+              <th style="padding: 12px 16px; font-weight: 700; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Sheet Name</th>
+              <th style="padding: 12px 16px; font-weight: 700; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Rows</th>
+              <th style="padding: 12px 16px; font-weight: 700; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Columns</th>
+              <th style="padding: 12px 16px; font-weight: 700; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Module Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sheet in import_record.sheets %}
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 12px 16px; font-weight: 600;">{{ sheet.sheet_name }}</td>
+                <td style="padding: 12px 16px; color: var(--text-muted);">{{ sheet.row_count }}</td>
+                <td style="padding: 12px 16px; color: var(--text-muted);">{{ sheet.column_count }}</td>
+                <td style="padding: 12px 16px;">
+                  {% if sheet.module %}
+                    <a href="/modules/{{ sheet.module.id }}" style="color: var(--primary); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                      Open Module
+                      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                  {% else %}
+                    <span style="color: var(--text-muted);">N/A</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" style="padding: 32px; text-align: center; color: var(--text-muted);">No sheet records.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
+        <a href="/modules" class="button primary" style="box-shadow: 0 4px 12px rgba(15,124,112,0.25);">View All Modules</a>
+        <a href="/imports" class="button ghost">View Import Log</a>
+      </div>
+    </div>
+  </div>
 {% endif %}
 {% endblock %}
-

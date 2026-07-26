@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center;">
+    <div style="width: 80px; height: 80px; background-color: var(--success-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);">
+        <svg width="40" height="40" fill="none" stroke="var(--success)" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+        </svg>
+    </div>
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">{{ title | default('Success!') }}</h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 400px; margin-bottom: 32px;">{{ message | default('The operation was completed successfully.') }}</p>
+    
+    <div style="display: flex; gap: 16px;">
+        <a href="{{ back_url | default('/') }}" class="button hover-elevate">
+            Go Back
+        </a>
+        <a href="/" class="button primary hover-elevate">
+            Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+@keyframes scaleIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+</style>
+{% endblock %}

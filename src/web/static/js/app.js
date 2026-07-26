@@ -2,12 +2,6 @@
  * HITECH Reminder System - Main App Logic
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    initSidebar();
-    initToasts();
-});
-
 function initTheme() {
     const themeToggleBtn = document.getElementById('theme-toggle');
     if (!themeToggleBtn) return;
@@ -86,9 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Users Logic
     initUsersTable();
-
-    // Activities Logic
-    initActivitiesTable();
 });
 
 function initCounters() {
@@ -126,17 +117,28 @@ function animateValue(obj, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
+let schedulerInterval = null;
+
 function initSchedulerMonitor() {
-    const widget = document.querySelector('.scheduler-widget');
-    if (!widget) return;
+    const countdownEl = document.getElementById('scheduler-countdown');
+    if (!countdownEl) return;
     
-    const targetStr = widget.getAttribute('data-next-run');
+    const targetStr = countdownEl.getAttribute('data-next-run');
     if (!targetStr) return;
     
     const targetDate = new Date(targetStr).getTime();
-    const countdownEl = document.getElementById('scheduler-countdown');
+    
+    // Clear any existing interval to prevent overlapping timers on HTMX swap
+    if (schedulerInterval) {
+        clearInterval(schedulerInterval);
+    }
     
     function updateCountdown() {
+        if (!document.getElementById('scheduler-countdown')) {
+            clearInterval(schedulerInterval);
+            return;
+        }
+        
         const now = new Date().getTime();
         const distance = targetDate - now;
         
@@ -153,8 +155,16 @@ function initSchedulerMonitor() {
     }
     
     updateCountdown();
-    setInterval(updateCountdown, 1000); // Tick every second for real-time feel
+    schedulerInterval = setInterval(updateCountdown, 1000); // Tick every second for real-time feel
 }
+
+// Re-initialize dynamic dashboard widgets after an HTMX swap
+document.addEventListener('htmx:afterSwap', (evt) => {
+    if (evt.detail.target.id === 'live-monitor-container') {
+        initCounters();
+        initSchedulerMonitor();
+    }
+});
 
 window.chartInstances = window.chartInstances || [];
 
@@ -300,55 +310,3 @@ function initUsersTable() {
 /* ==========================================================================
    Activities Management
    ========================================================================== */
-
-function initActivitiesTable() {
-    const searchInput = document.getElementById('activity-search');
-    const freqFilter = document.getElementById('activity-freq-filter');
-    const table = document.getElementById('activities-table');
-    const emptyState = document.getElementById('activities-empty-state');
-    const clearBtn = document.getElementById('clear-act-filters-btn');
-
-    if (!table || !searchInput || !freqFilter) return;
-
-    const rows = Array.from(table.querySelectorAll('tbody .activity-row'));
-
-    function filterRows() {
-        const query = searchInput.value.toLowerCase().trim();
-        const freq = freqFilter.value;
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            const rowSearch = row.getAttribute('data-search') || '';
-            const rowFreq = row.getAttribute('data-freq') || '';
-            
-            const matchesSearch = query === '' || rowSearch.includes(query);
-            const matchesFreq = freq === 'all' || rowFreq === freq;
-            
-            if (matchesSearch && matchesFreq) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        if (visibleCount === 0) {
-            table.style.display = 'none';
-            if (emptyState) emptyState.style.display = 'flex';
-        } else {
-            table.style.display = '';
-            if (emptyState) emptyState.style.display = 'none';
-        }
-    }
-
-    searchInput.addEventListener('keyup', filterRows);
-    freqFilter.addEventListener('change', filterRows);
-    
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            freqFilter.value = 'all';
-            filterRows();
-        });
-    }
-}

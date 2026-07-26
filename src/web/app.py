@@ -186,20 +186,116 @@ def dashboard(request: Request) -> typing.Any:
         close_db(db)
 
 
+@app.get("/dashboard/monitor", response_class=HTMLResponse)
+def dashboard_monitor(request: Request) -> typing.Any:
+    db = get_db()
+    try:
+        user = require_login(request, db)
+        if isinstance(user, RedirectResponse):
+            return HTMLResponse(status_code=401)
+
+        today = date.today()
+        from datetime import datetime
+        start_of_today = datetime(today.year, today.month, today.day)
+        
+        # Activity Stats
+        activities = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True)).all()
+        pending_count = sum(1 for row in activities if (row.status or "").strip().casefold() != "done")
+        done_count = sum(1 for row in activities if (row.status or "").strip().casefold() == "done")
+        activity_count = len(activities)
+        
+        # Email Stats Today
+        emails_sent_today = db.query(EmailLog).filter(EmailLog.created_at >= start_of_today).count()
+        failed_emails_today = db.query(EmailLog).filter(EmailLog.created_at >= start_of_today, EmailLog.success == False).count()
+        recent_emails = db.query(EmailLog).order_by(EmailLog.created_at.desc()).limit(10).all()
+        
+        # Scheduler Status
+        last_run = db.query(ReminderRun).order_by(ReminderRun.created_at.desc()).first()
+        scheduler_active = False
+        if last_run:
+            # If the scheduler ran within the last hour, consider it active
+            if (datetime.utcnow() - last_run.created_at).total_seconds() < 3600:
+                scheduler_active = True
+            
+        upcoming = get_upcoming_activity_records(db, today, logger, days=30, limit=12)
+        
+        # Totals
+        user_count = db.query(User).filter(User.is_active.is_(True)).count()
+        module_count = db.query(Module).count()
+
+        return render(
+            request,
+            "dashboard_monitor.html",
+            {
+                "today": today,
+                "activity_count": activity_count,
+                "pending_count": pending_count,
+                "done_count": done_count,
+                "emails_sent_today": emails_sent_today,
+                "failed_emails_today": failed_emails_today,
+                "recent_emails": recent_emails,
+                "scheduler_active": scheduler_active,
+                "last_run": last_run,
+                "upcoming": upcoming,
+                "user_count": user_count,
+                "module_count": module_count,
+            },
+            user,
+        )
+    finally:
+        close_db(db)
+
+
 @app.get("/activities", response_class=HTMLResponse)
-def activities(request: Request) -> typing.Any:
+def activities(
+    request: Request,
+    search: str = "",
+    user_id: str = "",
+    module_id: str = ""
+) -> typing.Any:
     db = get_db()
     try:
         user = require_login(request, db)
         if isinstance(user, RedirectResponse):
             return user
-        rows = (
-            db.query(ActivityRecord)
-            .filter(ActivityRecord.is_active.is_(True))
-            .order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc())
-            .all()
+            
+        query = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True))
+        
+        if search:
+            query = query.filter(ActivityRecord.activity.ilike(f"%{search}%"))
+            
+        if user_id and user_id != "all":
+            try:
+                uid = int(user_id)
+                query = query.filter(ActivityRecord.assigned_user_id == uid)
+            except ValueError:
+                pass
+                
+        if module_id and module_id != "all":
+            try:
+                mid = int(module_id)
+                query = query.filter(ActivityRecord.linked_module_id == mid)
+            except ValueError:
+                pass
+                
+        rows = query.order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc()).all()
+        
+        modules = db.query(Module).order_by(Module.name.asc()).all()
+        users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
+        
+        return render(
+            request, 
+            "activities.html", 
+            {
+                "activities": rows,
+                "modules": modules,
+                "users": users,
+                "search": search,
+                "user_id": user_id,
+                "module_id": module_id
+            }, 
+            user
         )
-        return render(request, "activities.html", {"activities": rows}, user)
     finally:
         close_db(db)
 
@@ -439,16 +535,22 @@ def activity_update(
 
 
 @app.post("/activities/{activity_id}/delete")
-def activity_delete(request: Request, activity_id: int) -> RedirectResponse:
+def activity_delete(request: Request, activity_id: int) -> typing.Any:
     db = get_db()
     try:
-        user = require_admin(request, db)
+        user = require_editor(request, db)
         if isinstance(user, RedirectResponse):
             return user
         row = db.query(ActivityRecord).filter(ActivityRecord.id == activity_id).first()
         if row:
             row.is_active = False
             db.commit()
+            
+        if request.headers.get("HX-Request"):
+            response = HTMLResponse(content="")
+            response.headers["HX-Trigger"] = "activityDeleted"
+            return response
+            
         return redirect("/activities?notice=Activity deleted")
     finally:
         close_db(db)

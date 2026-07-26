@@ -1,133 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-heading">
+
+<!-- Hero Section & Quick Actions -->
+<section class="panel hero-section" style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--bg-surface) 0%, var(--primary-light) 100%); border-left: 4px solid var(--accent); flex-wrap: wrap; gap: 16px;">
   <div>
-    <h1>{{ user.role|title }} Dashboard</h1>
-    <p>{{ today.strftime("%d %B %Y") }}</p>
+    <h1 style="font-size: 1.5rem; margin-bottom: 4px; color: var(--text-main);">Welcome back, {{ user.display_name }}!</h1>
+    <p style="color: var(--text-muted); margin: 0;">Here's what's happening today, {{ today.strftime("%d %B %Y") }}.</p>
   </div>
   {% if user.can_edit %}
-    <a href="/activities/new" class="button primary">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-      Add Activity
-    </a>
+    <div class="quick-actions" style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <a href="/activities/new" class="button primary">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        New Activity
+      </a>
+      <a href="/settings/email" class="button ghost">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Settings
+      </a>
+    </div>
   {% endif %}
 </section>
 
-<!-- Summary Cards with Animated Counters -->
-<section class="metric-grid summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-  <article class="metric">
-    <span>Total Activities</span>
-    <strong class="counter" data-target="{{ activity_count }}">0</strong>
-  </article>
-  <article class="metric">
-    <span>Upcoming Reminders</span>
-    <strong class="counter" data-target="{{ upcoming|length }}">0</strong>
-  </article>
-  
-  <!-- Live Metrics Data -->
-  <article class="metric">
-    <span>Total Users</span>
-    <strong class="counter" data-target="{{ user_count }}">0</strong>
-  </article>
-  <article class="metric">
-    <span>Emails Sent (MTD)</span>
-    <strong class="counter" data-target="{{ emails_sent_mtd }}">0</strong>
-  </article>
-  <article class="metric">
-    <span>Failed Emails</span>
-    <strong class="counter" data-target="{{ failed_emails }}">0</strong>
-  </article>
-</section>
-
-<section class="two-column">
-  <!-- Live Scheduler Monitor -->
-  <div class="panel live-scheduler" style="display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 40px 20px;">
-    <div style="margin-bottom: 24px;">
-      <span class="live-indicator" style="display: inline-flex; align-items: center; gap: 6px; background: var(--bg-surface-hover); padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.875rem; color: var(--text-main); font-weight: 500;">
-        <span class="pulse"></span> 
-        Monitoring Scheduler
-      </span>
-    </div>
-    
-    {% if upcoming %}
-      {% set next_run_date, next_act = upcoming[0] %}
-      <div class="scheduler-widget" data-next-run="{{ next_run_date.strftime('%Y-%m-%dT09:00:00Z') }}" style="display: flex; flex-direction: column; align-items: center;">
-        <h3 class="countdown-timer timer-display" id="scheduler-countdown" style="margin: 0; line-height: 1.1;">00:00:00</h3>
-        <p class="countdown-label" style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.75rem; margin-top: 8px;">Until Next Dispatch</p>
-        
-        <div class="scheduler-details" style="margin-top: 32px; width: 100%; max-width: 300px; text-align: left; background: var(--bg-surface-hover); padding: 16px; border-radius: var(--radius-md);">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: var(--text-muted); font-size: 0.875rem;">Activity</span>
-            <strong style="color: var(--text-main); font-size: 0.875rem;">{{ next_act.activity }}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: var(--text-muted); font-size: 0.875rem;">Assignment</span>
-            <strong style="color: var(--text-main); font-size: 0.875rem;">{{ next_act.assigned_user_id or "Global" }}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-muted); font-size: 0.875rem;">Frequency</span>
-            <span class="status-badge" style="background: var(--primary-light); color: var(--primary);">{{ next_act.frequency|title }}</span>
-          </div>
-        </div>
-      </div>
-    {% else %}
-      <div class="empty state-card" style="border: none;">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <p>No upcoming activities scheduled.</p>
-        {% if user.can_edit %}
-          <a href="/activities/new" class="button small ghost" style="margin-top:12px;">Schedule One Now</a>
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-
-  <!-- Real-time Email Log Preview -->
-  <div class="panel">
-    <div class="panel-head">
-      <h2 style="display: flex; align-items: center; gap: 8px;">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--primary);"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-        Email Dispatch Logs
-      </h2>
-      <a href="/settings/email" class="button small ghost">Settings</a>
-    </div>
-    <!-- Real-time Email Log Preview -->
-    <div id="email-log-feed" class="timeline-feed" style="display: flex; flex-direction: column;">
-      {% if recent_emails %}
-        {% for log in recent_emails %}
-        <div class="log-card {% if log.success %}success{% else %}error{% endif %}">
-          <div class="log-header">
-            <span class="status-badge {% if log.success %}success{% else %}error{% endif %}">
-              {% if log.success %}Success{% else %}Failed{% endif %}
-            </span>
-            <span class="log-time">{{ log.created_at.strftime("%H:%M:%S") }}</span>
-          </div>
-          <div class="log-body">
-            Sent to <strong>{{ log.recipient or "System Default" }}</strong> for <em>{{ log.subject }}</em>
-          </div>
-          {% if not log.success and log.message %}
-          <div class="log-reason">{{ log.message }}</div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="empty state-card" style="border: none;">
-          <p>No email logs found.</p>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-</section>
+<!-- HTMX Live Monitor Container -->
+<div id="live-monitor-container" hx-get="/dashboard/monitor" hx-trigger="load, every 30s" hx-swap="innerHTML">
+  <!-- Content will be injected by dashboard_monitor.html -->
+</div>
 
 <!-- Modern Charts -->
 <section class="two-column">
   <div class="panel">
-    <h2>Emails Sent (Last 6 Months)</h2>
+    <div class="panel-head">
+      <h2 style="font-size: 1.125rem;">Delivery Volume</h2>
+      <span class="status-badge" style="background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem;">Last 6 Months</span>
+    </div>
     <div class="chart-container" style="position: relative; height:250px; width:100%">
       <canvas id="chart-emails-month"></canvas>
     </div>
   </div>
   <div class="panel">
-    <h2>Delivery Success Rate</h2>
+    <div class="panel-head">
+      <h2 style="font-size: 1.125rem;">Success Rate</h2>
+      <span class="status-badge" style="background: var(--success-light); color: var(--success); padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600;">Healthy</span>
+    </div>
     <div class="chart-container" style="position: relative; height:250px; width:100%; display:flex; justify-content:center;">
       <canvas id="chart-success-rate"></canvas>
     </div>
@@ -136,9 +50,9 @@
 
 <!-- Inject server data to client -->
 <script>
-  window.CHART_MONTHS_LABELS = {{ chart_months_labels|safe }};
-  window.CHART_MONTHS_DATA = {{ chart_months_data|safe }};
-  window.CHART_SUCCESS_DATA = {{ chart_success_data|safe }};
+  window.CHART_MONTHS_LABELS = JSON.parse('{{ chart_months_labels|safe }}');
+  window.CHART_MONTHS_DATA = JSON.parse('{{ chart_months_data|safe }}');
+  window.CHART_SUCCESS_DATA = JSON.parse('{{ chart_success_data|safe }}');
 </script>
 
 <!-- Include Chart.js -->

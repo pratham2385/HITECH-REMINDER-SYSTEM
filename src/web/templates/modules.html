@@ -1,31 +1,255 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .module-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .module-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -5px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-light);
+  }
+  .module-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle at top right, rgba(15, 124, 112, 0.1) 0%, transparent 70%);
+    border-radius: 0 0 0 100%;
+    pointer-events: none;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .module-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--bg-app), var(--bg-surface));
+    border: 1px solid var(--border-color);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .module-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .module-desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .module-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+  }
+  .metric-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .metric-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+  .status-idle {
+    background: var(--bg-app);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+  }
+  .action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .action-primary {
+    background: var(--primary);
+    color: var(--bg-surface);
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .action-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 124, 112, 0.3);
+  }
+  .action-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  .action-danger:hover {
+    background: rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+</style>
+
 <section class="page-heading">
   <div>
     <h1>Modules</h1>
-    <p>Editable pages created from workbook sheets.</p>
+    <p>Editable application modules created from workbook sheets.</p>
   </div>
   {% if user.can_edit %}
-    <a href="/imports/new" class="button primary">Import Excel</a>
+    <a href="/imports/new" class="button primary" style="box-shadow: 0 4px 12px rgba(15, 124, 112, 0.25); border-radius: var(--radius-full); padding: 10px 20px; font-weight: 600;">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 8px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      Import Excel
+    </a>
   {% endif %}
 </section>
 
-<section class="module-grid">
+<div class="modules-grid">
   {% for module in modules %}
-    <article class="module-card">
-      <a href="/modules/{{ module.id }}">
-        <strong>{{ module.name }}</strong>
-        <span>{{ module.records|length }} rows · {{ module.fields|length }} columns</span>
-      </a>
-      {% if user.is_owner %}
-        <form method="post" action="/modules/{{ module.id }}/delete">
-          <button type="submit" class="button small danger">Delete</button>
-        </form>
-      {% endif %}
-    </article>
-  {% else %}
-    <p class="empty">No modules yet. Import an Excel workbook to begin.</p>
-  {% endfor %}
-</section>
-{% endblock %}
+    <div class="module-card">
+      
+      <div class="card-header">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div class="module-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <h3 class="module-title">{{ module.name }}</h3>
+            {% set has_activities = (module.activities|length > 0) %}
+            <span class="status-badge {{ 'status-active' if has_activities else 'status-idle' }}">
+              {% if has_activities %}
+                <span class="pulse" style="width: 6px; height: 6px; background-color: currentColor; border-radius: 50%; margin-right: 2px; display: inline-block;"></span>
+              {% else %}
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              {% endif %}
+              {{ 'Active' if has_activities else 'Idle' }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <p class="module-desc">
+        {% if module.description %}
+          {{ module.description }}
+        {% else %}
+          <em>No description provided for this module.</em>
+        {% endif %}
+      </p>
 
+      <div class="module-metrics">
+        <div class="metric-item" style="flex: 1;">
+          <span class="metric-value">{{ module.records|length }}</span>
+          <span class="metric-label">Rows</span>
+        </div>
+        <div class="metric-item" style="flex: 1;">
+          <span class="metric-value">{{ module.fields|length }}</span>
+          <span class="metric-label">Columns</span>
+        </div>
+        <div class="metric-item" style="flex: 1;">
+          <span class="metric-value">{{ module.activities|length }}</span>
+          <span class="metric-label">Activities</span>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <a href="/modules/{{ module.id }}" class="action-btn action-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          Open Module
+        </a>
+        
+        {% if user.is_owner %}
+          <form method="post" action="/modules/{{ module.id }}/delete" style="margin: 0; width: auto;">
+            <button type="submit" class="action-btn action-danger" style="padding: 10px 14px;" title="Delete Module" onclick="return confirm('Delete this module permanently?');">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </form>
+        {% endif %}
+      </div>
+      
+    </div>
+  {% else %}
+    </div> <!-- Close grid early -->
+    <div class="empty state-card" style="border: 1px dashed var(--border-color); background: var(--bg-surface); padding: 60px 40px; border-radius: var(--radius-xl); text-align: center; margin-top: 24px;">
+      <svg width="56" height="56" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--primary); margin-bottom:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">No Modules Found</h3>
+      <p style="color: var(--text-muted); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">Get started by importing your first Excel workbook.</p>
+      {% if user.can_edit %}
+        <a href="/imports/new" class="button primary" style="box-shadow: 0 4px 12px rgba(15,124,112,0.2); border-radius: var(--radius-full); padding: 12px 24px; font-weight: 600;">Import Excel</a>
+      {% endif %}
+    </div>
+    <!-- Dummy div to absorb the closing grid tag if else triggers -->
+    <div style="display:none;">
+  {% endfor %}
+</div>
+{% endblock %}

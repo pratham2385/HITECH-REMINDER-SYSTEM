@@ -1,0 +1,172 @@
+<!-- KPI Cards -->
+<section class="metric-grid summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--accent); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Total Activities</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ activity_count }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+  
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--warning); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Pending Activities</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ pending_count }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--success); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Completed Activities</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ done_count }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+  
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--success); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Emails Sent Today</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ emails_sent_today }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--danger); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Emails Failed Today</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ failed_emails_today }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+
+  <article class="metric hover-elevate" style="border-top: 3px solid var(--primary); padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <span>Total Users</span>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5V4H2v16h5m10 0v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5m10 0H7"></path></svg>
+    </div>
+    <strong class="counter" data-target="{{ user_count }}" style="font-size: 1.75rem;">0</strong>
+  </article>
+</section>
+
+<section class="two-column">
+  <!-- Upcoming / Scheduler Status -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2 style="font-size: 1.125rem; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--warning);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        Scheduler Status
+      </h2>
+      
+      {% if scheduler_active %}
+        <span class="status-badge" style="background: var(--success-light); color: var(--success); display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600;">
+          <span class="status-dot pulsing" style="width:6px; height:6px; border-radius:50%; background:var(--success);"></span> Active
+        </span>
+      {% else %}
+        <span class="status-badge" style="background: var(--danger-light); color: var(--danger); display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600;">
+          Inactive
+        </span>
+      {% endif %}
+    </div>
+
+    {% if last_run %}
+      <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 16px;">
+        Last Run: <strong>{{ last_run.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</strong>
+      </div>
+    {% endif %}
+
+    {% if upcoming %}
+      {% set next_run_date, next_act = upcoming[0] %}
+      <div style="text-align: center; margin: 24px 0 32px 0;">
+        <p style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Next Dispatch In</p>
+        <h3 class="timer-display" id="scheduler-countdown" data-next-run="{{ next_run_date.strftime('%Y-%m-%dT09:00:00Z') }}" style="font-size: 2.5rem; margin: 0; color: var(--text-main); font-variant-numeric: tabular-nums;">00:00:00</h3>
+        
+        <!-- Progress Bar Placeholder -->
+        <div style="margin-top: 16px; width: 100%; background: var(--bg-surface-hover); border-radius: var(--radius-full); height: 6px; overflow: hidden; position: relative;">
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 65%; background: var(--accent); border-radius: var(--radius-full); transition: width 1s linear;"></div>
+        </div>
+      </div>
+
+      <h4 style="font-size: 0.875rem; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase;">Upcoming Queue</h4>
+      <div class="timeline-feed" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">{{ next_act.activity[:1] | upper }}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ next_act.activity }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Assigned to: {{ next_act.assigned_user_id or "Global" }}</div>
+          </div>
+          <span class="status-badge" style="background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 500; text-transform: capitalize;">{{ next_act.frequency }}</span>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty state-card" style="border: none; padding: 48px 20px; text-align: center;">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin: 0 auto 12px auto;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p style="color: var(--text-muted);">No upcoming activities scheduled.</p>
+        {% if user.can_edit %}
+          <a href="/activities/new" class="button small ghost" style="margin-top:12px;">Schedule One Now</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Email Activity (Timeline) -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2 style="font-size: 1.125rem; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: var(--accent);"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Recent Activity
+      </h2>
+      <a href="/settings/email" class="button small ghost">View All</a>
+    </div>
+
+    <div id="email-log-feed" style="display: flex; flex-direction: column; position: relative; padding-top: 8px;">
+      <!-- Timeline vertical line -->
+      <div style="position: absolute; left: 15px; top: 16px; bottom: 16px; width: 2px; background: var(--border-color); z-index: 0;"></div>
+      
+      {% if recent_emails %}
+        {% for log in recent_emails %}
+        <div style="display: flex; gap: 16px; margin-bottom: 16px; position: relative; z-index: 1;">
+          {% if log.success %}
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 0 4px var(--bg-surface);">
+              <svg width="14" height="14" fill="none" stroke="var(--success)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+          {% else %}
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 0 4px var(--bg-surface);">
+              <svg width="14" height="14" fill="none" stroke="var(--danger)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </div>
+          {% endif %}
+          <div style="flex: 1; padding: 12px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              {% if log.success %}
+                <span style="color: var(--success); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">
+                  Delivered
+                </span>
+              {% else %}
+                <span style="color: var(--danger); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">
+                  Failed
+                </span>
+              {% endif %}
+              <span style="font-size: 0.7rem; color: var(--text-muted);">{{ log.created_at.strftime("%H:%M") }}</span>
+            </div>
+            <div style="font-size: 0.875rem; color: var(--text-main);">
+              To: <strong>{{ log.recipient or "System Default" }}</strong>
+            </div>
+            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">
+              Sub: {{ log.subject }}
+            </div>
+            {% if not log.success and log.message %}
+              <div style="margin-top: 8px; font-size: 0.75rem; color: var(--danger); background: var(--danger-light); padding: 6px; border-radius: 4px;">
+                {{ log.message }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty state-card" style="border: none; padding: 32px 20px; z-index: 1;">
+          <p style="color: var(--text-muted);">No emails sent yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>

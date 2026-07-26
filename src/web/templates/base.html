@@ -23,6 +23,9 @@
       }
     })();
   </script>
+  
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body>
 
@@ -53,26 +56,56 @@
     <!-- Sidebar -->
     <aside class="app-sidebar" id="app-sidebar">
       <div class="sidebar-header">
-        <a class="sidebar-brand" href="/dashboard">{{ app_name }}</a>
-        <button id="sidebar-close" aria-label="Close sidebar">
+        <a class="sidebar-brand" href="/dashboard">
+          <svg class="brand-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          <span class="sidebar-brand-text">{{ app_name }}</span>
+        </a>
+        <button id="sidebar-close" aria-label="Close sidebar" class="mobile-only">
           <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <button id="sidebar-collapse-btn" aria-label="Toggle sidebar collapse" class="desktop-only button ghost small" onclick="document.getElementById('app-sidebar').classList.toggle('collapsed');">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
         </button>
       </div>
       
       <div class="sidebar-nav">
         {% if user %}
           <div class="sidebar-nav-heading">Main Menu</div>
-          <a href="/dashboard">Dashboard</a>
-          <a href="/activities">Activities</a>
-          <a href="/modules">Modules</a>
-          <a href="/imports">Imports</a>
-          <a href="/reminders/preview">Reminders</a>
+          <a href="/dashboard">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a href="/activities">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <span class="nav-text">Activities</span>
+          </a>
+          <a href="/modules">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            <span class="nav-text">Modules</span>
+          </a>
+          <a href="/imports">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span class="nav-text">Imports</span>
+          </a>
+          <a href="/reminders/preview">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span class="nav-text">Reminders</span>
+          </a>
           
           {% if user.is_owner %}
             <div class="sidebar-nav-heading">Administration</div>
-            <a href="/settings/email">Email Settings</a>
-            <a href="/settings/whatsapp">WhatsApp Settings</a>
-            <a href="/users">User Management</a>
+            <a href="/settings/email">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+              <span class="nav-text">Email Settings</span>
+            </a>
+            <a href="/settings/whatsapp">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+              <span class="nav-text">WhatsApp Settings</span>
+            </a>
+            <a href="/users">
+              <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+              <span class="nav-text">User Management</span>
+            </a>
           {% endif %}
         {% endif %}
       </div>
@@ -87,13 +120,33 @@
       <!-- Top Navbar -->
       <header class="app-navbar">
         <div class="navbar-left">
-          <button id="sidebar-toggle" aria-label="Toggle sidebar">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <button id="sidebar-toggle" aria-label="Toggle sidebar" class="icon-button">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
+          
+          <div class="navbar-breadcrumbs desktop-only">
+            <span class="breadcrumb-item text-muted">Workspace</span>
+            <svg class="breadcrumb-separator" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            <span class="breadcrumb-item fw-500">{{ app_name }}</span>
+          </div>
+
+
         </div>
         
         <div class="navbar-right">
-          <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+          <div class="scheduler-status desktop-only">
+            <span class="status-dot pulsing"></span>
+            <span class="status-text">Scheduler Active</span>
+          </div>
+
+          <div class="navbar-divider desktop-only"></div>
+
+          <button class="icon-button notification-btn" aria-label="Notifications">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span class="notification-badge">3</span>
+          </button>
+
+          <button id="theme-toggle" class="icon-button theme-toggle-btn" aria-label="Toggle Theme">
             <!-- Sun/Moon Icon -->
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -101,12 +154,35 @@
           </button>
           
           {% if user %}
-            <div class="user-profile-menu">
-              <a href="/profile" class="user-name">{{ user.display_name }} ({{ user.role|title }})</a>
-              <form action="/logout" method="post" class="logout-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="button small ghost">Logout</button>
-              </form>
+            <div class="user-profile-menu dropdown-container">
+              <button class="user-name profile-dropdown-btn">
+                <div class="avatar">{{ user.display_name[:1] | upper }}</div>
+                <span class="desktop-only">{{ user.display_name }} ({{ user.role|title }})</span>
+                <svg class="dropdown-chevron desktop-only" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+              <div class="profile-dropdown-menu">
+                <div class="dropdown-header">
+                  <strong>{{ user.display_name }}</strong>
+                  <span>{{ user.email }}</span>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a href="/profile" class="dropdown-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  My Profile
+                </a>
+                <a href="/settings/email" class="dropdown-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  Settings
+                </a>
+                <div class="dropdown-divider"></div>
+                <form action="/logout" method="post" class="logout-form m-0">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button type="submit" class="dropdown-item text-danger" aria-label="Logout">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Logout
+                  </button>
+                </form>
+              </div>
             </div>
           {% else %}
             <div class="user-profile-menu">
@@ -126,6 +202,8 @@
       
     </div>
   </div>
+
+  {% block modals %}{% endblock %}
 
   <script src="{{ request.url_for('static', path='js/app.js') }}"></script>
 </body>

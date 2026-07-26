@@ -1,5 +1,169 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .activities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  .activity-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .activity-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-light);
+  }
+  .activity-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+    opacity: 0.8;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .status-pill {
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-pill.done {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+  .status-pill.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+  .freq-pill {
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid rgba(15, 124, 112, 0.2);
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .timeline-box {
+    background: var(--bg-app);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border-color);
+  }
+  .timeline-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .timeline-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .timeline-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+  .timeline-date {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-color);
+    margin-top: auto;
+  }
+  .assigned-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+  }
+  .global-avatar {
+    background: var(--border-color);
+    color: var(--text-muted);
+  }
+  .user-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  .card-actions {
+    display: flex;
+    gap: 6px;
+  }
+</style>
+
 <section class="page-heading">
   <div>
     <h1>Activities</h1>
@@ -15,121 +179,188 @@
   </div>
 </section>
 
-<section class="panel">
-  <div class="filter-bar" style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
-    <div style="flex: 1; min-width: 250px; position: relative;">
-      <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; left: 12px; top: 11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <input type="text" id="activity-search" placeholder="Search activities by name or module..." style="padding-left: 36px; max-width: 400px;">
+<section class="panel" style="padding: 0; background: transparent; border: none; box-shadow: none;">
+  <!-- Filter Bar -->
+  <form class="filter-bar" hx-get="/activities" hx-target="#activities-table-container" hx-select="#activities-table-container" hx-push-url="true" hx-trigger="change, submit" style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; background: var(--bg-surface); padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+    <div style="flex: 2; min-width: 280px; position: relative;">
+      <svg width="20" height="20" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <input type="text" name="search" value="{{ search }}" placeholder="Search activities by name..." hx-trigger="keyup changed delay:500ms, search" style="width: 100%; padding: 12px 16px 12px 44px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; color: var(--text-main); transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
     </div>
-    <select id="activity-freq-filter" style="width: 180px;">
-      <option value="all">All Frequencies</option>
-      <option value="one time">One Time</option>
-      <option value="daily">Daily</option>
-      <option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option>
-      <option value="quarterly">Quarterly</option>
-      <option value="half-yearly">Half-Yearly</option>
-      <option value="yearly">Yearly</option>
-    </select>
+    
+    <div style="flex: 1; position: relative; min-width: 200px;">
+      <select name="module_id" style="width: 100%; appearance: none; padding: 12px 40px 12px 20px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+        <option value="all">All Modules</option>
+        {% for mod in modules %}
+          <option value="{{ mod.id }}" {% if module_id|string == mod.id|string %}selected{% endif %}>{{ mod.name }}</option>
+        {% endfor %}
+      </select>
+      <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+    </div>
+    
+    <div style="flex: 1; position: relative; min-width: 200px;">
+      <select name="user_id" style="width: 100%; appearance: none; padding: 12px 40px 12px 20px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+        <option value="all">All Users</option>
+        {% for u in users %}
+          <option value="{{ u.id }}" {% if user_id|string == u.id|string %}selected{% endif %}>{{ u.display_name }}</option>
+        {% endfor %}
+      </select>
+      <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+    </div>
+  </form>
+
+  <!-- Cards Grid -->
+  <div id="activities-table-container" hx-get="/activities" hx-trigger="activityDeleted from:body" hx-select="#activities-table-container" hx-swap="outerHTML">
+  <div class="activities-grid" id="activities-table">
+    {% for item in activities %}
+      <div class="activity-card activity-row" data-freq="{{ item.frequency|lower }}" data-search="{{ item.activity|lower }} {% if item.linked_module %}{{ item.linked_module.name|lower }}{% endif %}">
+        
+        <div class="card-header">
+          <div style="display: flex; flex-direction: column;">
+            <h3 class="card-title">{{ item.activity }}</h3>
+            <div class="card-badges">
+              <span class="freq-pill">{{ item.frequency }}</span>
+              {% if item.status %}
+                {% set is_done = (item.status|lower == 'done') %}
+                <span class="status-pill {{ 'done' if is_done else 'pending' }}">
+                  {% if not is_done %}
+                    <span class="pulse" style="width:6px; height:6px; background-color: currentColor; margin-right:2px; border-radius: 50%; display: inline-block;"></span>
+                  {% else %}
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  {% endif %}
+                  {{ item.status }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if item.date_value %}
+        <div class="timeline-box">
+          <div class="timeline-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          </div>
+          <div class="timeline-details">
+            <span class="timeline-label">Scheduled For</span>
+            <span class="timeline-date">{{ item.date_value }}</span>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if item.linked_module %}
+          <div style="margin-top: 4px;">
+            <a href="/modules/{{ item.linked_module.id }}" class="button small ghost" style="padding: 6px 12px; background: rgba(15, 124, 112, 0.05); color: var(--primary); border: 1px dashed rgba(15, 124, 112, 0.3); border-radius: var(--radius-sm); width: fit-content; text-decoration: none; display: flex; align-items: center;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+              {{ item.linked_module.name }}
+            </a>
+          </div>
+        {% endif %}
+
+        <div class="card-footer">
+          <div class="assigned-user">
+            {% if item.assigned_user %}
+              <div class="user-avatar" title="{{ item.assigned_user.display_name }}">
+                {{ item.assigned_user.display_name[:2] }}
+              </div>
+              <span class="user-name">{{ item.assigned_user.display_name }}</span>
+            {% else %}
+              <div class="user-avatar global-avatar" title="Global Activity">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </div>
+              <span class="user-name" style="color: var(--text-muted);">Global (None)</span>
+            {% endif %}
+          </div>
+          
+          <div class="card-actions">
+            {% if user.can_edit %}
+              <!-- Send Now -->
+              <form method="post" action="/activities/{{ item.id }}/send-reminder" style="margin: 0;">
+                <button type="submit" class="button small ghost" style="padding: 6px; color: #0ea5e9; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.1);" title="Send Reminder Now">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </button>
+              </form>
+              
+              <!-- Edit -->
+              <a href="/activities/{{ item.id }}/edit" class="button small ghost" style="padding: 6px; background: var(--bg-app); border: 1px solid var(--border-color);" title="Edit Activity">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </a>
+              
+              <!-- Delete -->
+              <button type="button" class="button small ghost" style="padding: 6px; color: #ef4444; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1);" title="Delete Activity" data-id="{{ item.id }}" data-activity="{{ item.activity | escape }}" onclick="openDeleteModal(this.dataset.id, this.dataset.activity)">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   </div>
 
-  <div class="table-wrap">
-    <table class="data-table" id="activities-table">
-      <thead>
-        <tr>
-          <th>Activity Details</th>
-          <th>Frequency & Schedule</th>
-          <th>Module Link</th>
-          <th>Assignment</th>
-          <th style="text-align: right;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in activities %}
-          <tr class="activity-row" data-freq="{{ item.frequency|lower }}" data-search="{{ item.activity|lower }} {% if item.linked_module %}{{ item.linked_module.name|lower }}{% endif %}">
-            <td>
-              <div style="display: flex; flex-direction: column;">
-                <strong style="color: var(--text-main);">{{ item.activity }}</strong>
-                {% if item.status %}
-                  <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
-                    <span class="pulse" style="display:inline-block; width:6px; height:6px; margin-right:4px; {% if item.status|lower == 'done' %}background:var(--text-muted); box-shadow:none; animation:none;{% endif %}"></span>
-                    {{ item.status }}
-                  </span>
-                {% endif %}
-              </div>
-            </td>
-            <td>
-              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-                <span class="status-badge" style="background: var(--primary-light); color: var(--primary);">{{ item.frequency }}</span>
-                {% if item.date_value %}
-                  <span style="font-size: 0.75rem; color: var(--text-muted);">{{ item.date_value }}</span>
-                {% endif %}
-              </div>
-            </td>
-            <td>
-              {% if item.linked_module %}
-                <a href="/modules/{{ item.linked_module.id }}" class="button small ghost" style="padding:4px 8px;">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-                  {{ item.linked_module.name }}
-                </a>
-              {% else %}
-                <span style="color: var(--text-muted); font-size: 0.875rem;">None</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if item.assigned_user %}
-                <span style="font-size: 0.875rem; color: var(--text-main);">{{ item.assigned_user.display_name }}</span>
-              {% else %}
-                <span style="font-size: 0.875rem; color: var(--text-muted);">Global (None)</span>
-              {% endif %}
-            </td>
-            
-            <td>
-              <div class="actions" style="justify-content: flex-end;">
-                {% if user.can_edit %}
-                  <!-- Send Now -->
-                  <form method="post" action="/activities/{{ item.id }}/send-reminder" style="margin: 0;">
-                    <button type="submit" class="button small ghost" style="color: #0ea5e9;" title="Send Reminder Now">
-                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                    </button>
-                  </form>
-                  
-                  <!-- Edit -->
-                  <a href="/activities/{{ item.id }}/edit" class="button small ghost" title="Edit Activity">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                  </a>
-                  
-                  <!-- Delete -->
-                  {% if user.is_owner %}
-                    <form method="post" action="/activities/{{ item.id }}/delete" style="margin: 0;">
-                      <button type="submit" class="button small ghost" style="color: var(--danger);" title="Delete Activity" onclick="return confirm('Delete this activity permanently?');">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                      </button>
-                    </form>
-                  {% endif %}
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    
-    <div id="activities-empty-state" class="empty state-card" style="display: none; border: none;">
-      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-      <p>No activities match your filters.</p>
-      <button type="button" class="button small ghost" id="clear-act-filters-btn" style="margin-top:12px;">Clear Filters</button>
-    </div>
+  <div id="activities-empty-state" class="empty state-card" style="display: none; border: 1px dashed var(--border-color); background: var(--bg-surface); padding: 40px; border-radius: var(--radius-lg); margin-top: 20px;">
+    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+    <p style="font-size: 1.1rem; color: var(--text-main); font-weight: 500;">No activities match your filters.</p>
+    <button type="button" class="button small ghost" id="clear-act-filters-btn" style="margin-top:16px; font-weight: 600;">Clear Filters</button>
+  </div>
 
-    {% if not activities %}
-      <div class="empty state-card" style="border: none;">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--text-muted); margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-        <p>No activities have been created yet.</p>
-        {% if user.can_edit %}
-          <a href="/activities/new" class="button small primary" style="margin-top:12px;">Create First Activity</a>
-        {% endif %}
-      </div>
-    {% endif %}
+  {% if not activities %}
+    <div class="empty state-card" style="border: 1px dashed var(--border-color); background: var(--bg-surface); padding: 60px 40px; border-radius: var(--radius-lg); margin-top: 20px;">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--primary); margin-bottom:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">No activities found</h3>
+      <p style="color: var(--text-muted); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">Get started by creating your first automated activity reminder.</p>
+      {% if user.can_edit %}
+        <a href="/activities/new" class="button primary" style="box-shadow: 0 4px 12px rgba(15,124,112,0.2); border-radius: var(--radius-full); padding: 12px 24px;">Create First Activity</a>
+      {% endif %}
+    </div>
+  {% endif %}
   </div>
 </section>
+{% endblock %}
+
+{% block modals %}
+<!-- Delete Confirmation Modal -->
+<div id="deleteActivityModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+  <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; animation: modalIn 0.2s ease-out;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <h5 style="margin: 0; color: var(--text-main); font-weight: 700; font-size: 1.1rem;">Confirm Deletion</h5>
+      <button type="button" class="icon-button" aria-label="Close" onclick="closeDeleteModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted);">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div style="padding: 24px;">
+      <p style="color: var(--text-main); margin: 0; font-size: 1rem; line-height: 1.5;">
+        Are you sure you want to delete this activity, no emails will be sent if deleted
+      </p>
+    </div>
+    <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background: rgba(0,0,0,0.02);">
+      <button type="button" class="button ghost" onclick="closeDeleteModal()">Cancel</button>
+      <form id="delete-modal-form" hx-post="" hx-swap="none" style="margin: 0;">
+        <button type="submit" class="button primary" style="background-color: #ef4444; border-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);" onclick="closeDeleteModal()">Delete Activity</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+
+<script>
+  function openDeleteModal(id, name) {
+    const form = document.getElementById('delete-modal-form');
+    form.setAttribute('hx-post', '/activities/' + id + '/delete');
+    
+    // Re-process HTMX attributes so the new hx-post is recognized
+    if (typeof htmx !== 'undefined') {
+      htmx.process(form);
+    }
+    
+    document.getElementById('deleteActivityModal').style.display = 'flex';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteActivityModal').style.display = 'none';
+  }
+</script>
 {% endblock %}
