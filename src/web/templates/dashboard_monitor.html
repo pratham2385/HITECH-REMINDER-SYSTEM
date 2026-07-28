@@ -93,7 +93,7 @@
           <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">{{ next_act.activity[:1] | upper }}</div>
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600; font-size: 0.875rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ next_act.activity }}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">Assigned to: {{ next_act.assigned_user_id or "Global" }}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Assigned to: {{ next_act.recipient.name if next_act.recipient else "Global" }}</div>
           </div>
           <span class="status-badge" style="background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 500; text-transform: capitalize;">{{ next_act.frequency }}</span>
         </div>

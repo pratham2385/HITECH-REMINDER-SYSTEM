@@ -125,4 +125,9 @@ def require_manager(request: Request, db: Session) -> typing.Union[User, Redirec
     return user
 
 def require_editor(request: Request, db: Session) -> typing.Union[User, RedirectResponse]:
-    return require_manager(request, db)
+    user = require_login(request, db)
+    if isinstance(user, RedirectResponse):
+        return user
+    if user.role not in {"admin", "owner", "manager", "employee"}:
+        return redirect("/dashboard?error=Editor access required")
+    return user

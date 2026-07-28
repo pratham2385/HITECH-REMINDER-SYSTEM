@@ -127,7 +127,7 @@ def dashboard(request: Request) -> typing.Any:
         from datetime import datetime
         first_day_of_month = datetime(today.year, today.month, 1)
         
-        user_count = db.query(User).filter(User.is_active.is_(True)).count()
+        user_count = db.query(Recipient.email).join(TaskCollection, Recipient.workspace_id == TaskCollection.id).filter(TaskCollection.is_active == True).distinct().count()
         emails_sent_mtd = db.query(EmailLog).filter(EmailLog.created_at >= first_day_of_month).count()
         failed_emails = db.query(EmailLog).filter(EmailLog.success == False).count()
         
@@ -261,7 +261,7 @@ def dashboard_monitor(request: Request) -> typing.Any:
         upcoming = get_upcoming_activity_records(db, today, logger, days=30, limit=12)
         
         # Totals
-        user_count = db.query(User).filter(User.is_active.is_(True)).count()
+        user_count = db.query(Recipient.email).join(TaskCollection, Recipient.workspace_id == TaskCollection.id).filter(TaskCollection.is_active == True).distinct().count()
         module_count = db.query(Module).count()
 
         return render(

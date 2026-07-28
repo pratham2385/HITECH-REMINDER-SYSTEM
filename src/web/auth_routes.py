@@ -354,7 +354,12 @@ def user_update(
     if password.strip():
         account.password_hash = hash_password(password)
         
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return redirect_with_msg(f"/users/{user_id}/edit", "That email/username is already in use by another user.", "error")
+        
     return redirect_with_msg("/users", "User updated successfully", "success")
 
 
