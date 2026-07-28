@@ -116,9 +116,8 @@ def signup_submit(
     if db.query(User).filter(User.email == email).first():
         return redirect_with_msg("/signup", "Email is already registered.", "error")
         
-    valid_roles = {"admin", "manager", "employee"}
-    if role not in valid_roles:
-        return redirect_with_msg("/signup", "Invalid role.", "error")
+    # Security Fix: Force all new signups to be 'employee'
+    role = "employee"
 
     new_user = User(
         username=email, # fallback

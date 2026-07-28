@@ -29,84 +29,104 @@ body.auth-page .page-content {
 
 /* Left Side: Branding Panel */
 .auth-branding-panel {
-  flex: 1;
+  flex: 0 0 58%; /* Approx 55-60% */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 60px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
+  justify-content: center;
+  padding: 80px;
+  background-color: var(--bg-app);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(15, 124, 112, 0.08), transparent 30%),
+    radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.08), transparent 30%);
+  color: var(--text-main);
   position: relative;
   overflow: hidden;
-}
-
-/* Abstract Background Pattern for Branding */
-.auth-branding-panel::before {
-  content: '';
-  position: absolute;
-  top: -20%;
-  left: -10%;
-  width: 140%;
-  height: 140%;
-  background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 40%),
-              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 30%);
-  pointer-events: none;
-  z-index: 0;
+  border-right: 1px solid var(--border-color);
 }
 
 .auth-branding-content {
   position: relative;
   z-index: 1;
-  max-width: 480px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .auth-logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   margin-bottom: 60px;
+  color: var(--primary);
 }
 
 .auth-logo svg {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
-.auth-illustration {
-  position: relative;
-  z-index: 1;
-  margin: auto 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.auth-illustration svg {
-  max-width: 100%;
-  height: auto;
-  opacity: 0.9;
-  filter: drop-shadow(0 20px 30px rgba(0,0,0,0.15));
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-15px); }
-  100% { transform: translateY(0px); }
-}
-
-.auth-branding-footer h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 16px;
+/* Typewriter Title Styles */
+.typewriter-title {
+  font-size: 2.75rem;
+  font-weight: 800;
   line-height: 1.2;
+  margin-bottom: 40px;
+  min-height: 120px; /* Prevent layout shift */
+  color: var(--text-main);
+  letter-spacing: -0.03em;
 }
-.auth-branding-footer p {
-  font-size: 1.1rem;
-  opacity: 0.8;
-  line-height: 1.5;
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  background-color: var(--primary);
+  vertical-align: text-bottom;
+  animation: blink 1s step-start infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Inspirational Quote System */
+.daily-quote-container {
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border-color);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeSlideUpQuote 1s ease-out forwards;
+  animation-delay: 2.5s; /* Wait for typewriter */
+  max-width: 480px;
+}
+
+@keyframes fadeSlideUpQuote {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quote-text {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 16px;
+  font-weight: 400;
+}
+
+.quote-author {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Right Side: Form Panel */
@@ -253,7 +273,7 @@ body.auth-page .page-content {
   padding: 14px;
   margin-top: 12px;
   background: var(--primary);
-  color: white;
+  color: var(--bg-app);
   border: none;
   border-radius: var(--radius-md);
   font-size: 1rem;
@@ -269,7 +289,7 @@ body.auth-page .page-content {
 .auth-submit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(15, 124, 112, 0.3);
-  background: var(--primary-dark);
+  background: var(--primary-hover);
 }
 .auth-submit-btn:active {
   transform: translateY(0);

@@ -11,20 +11,14 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         HITECH Auth
       </div>
-    </div>
-    
-    <div class="auth-illustration">
-      <svg width="320" height="320" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 010 7.75"></path>
-      </svg>
-    </div>
-    
-    <div class="auth-branding-footer">
-      <h2>Join the Team</h2>
-      <p>Create an account to start managing your smart schedule, receiving automated alerts, and improving workflow efficiency.</p>
+      
+      <!-- Typewriter Title -->
+      <h1 id="typewriter-title" class="typewriter-title"></h1>
+      
+      <!-- Daily Quote Container -->
+      <div id="daily-quote-container" class="daily-quote-container">
+        <!-- JS injects quote here -->
+      </div>
     </div>
   </div>
 
@@ -112,6 +106,9 @@ function checkStrength() {
         msg.textContent = 'Minimum 8 chars, 1 letter, 1 number';
     }
 }
-document.body.classList.add('auth-page');
+</script>
+<script src="{{ request.url_for('static', path='js/auth_enhancements.js') }}"></script>
+<script>
+  document.body.classList.add('auth-page');
 </script>
 {% endblock %}

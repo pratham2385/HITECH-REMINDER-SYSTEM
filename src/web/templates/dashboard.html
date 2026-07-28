@@ -59,3 +59,79 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 {% endblock %}
+
+{% block modals %}
+<!-- Clear Recent Activity Confirmation Modal -->
+<div id="clearActivityModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+  <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; animation: modalIn 0.2s ease-out;">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <h5 style="margin: 0; color: var(--text-main); font-weight: 700; font-size: 1.1rem;">Confirm Clear All</h5>
+      <button type="button" class="icon-button" aria-label="Close" onclick="closeClearModal()" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted);">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div style="padding: 24px;">
+      <p style="color: var(--text-main); margin: 0; font-size: 1rem; line-height: 1.5;">
+        Are you sure you want to clear all recent email activities? This action cannot be undone.
+      </p>
+    </div>
+    <div style="padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px; background: rgba(0,0,0,0.02);">
+      <button type="button" class="button ghost" onclick="closeClearModal()">Cancel</button>
+      <form id="clear-modal-form" style="margin: 0;" onsubmit="submitClearModal(event)">
+        <!-- CSRF token will be dynamically set by JS -->
+        <input type="hidden" name="csrf_token" id="clear-csrf-input" value="">
+        <button type="submit" class="button primary" style="background-color: #ef4444; border-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">Clear All</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+</style>
+
+<script>
+  function openClearModal(csrfToken) {
+    const modal = document.getElementById('clearActivityModal');
+    const csrfInput = document.getElementById('clear-csrf-input');
+    
+    if (csrfInput) {
+      csrfInput.value = csrfToken;
+    }
+    
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  }
+
+  function closeClearModal() {
+    const modal = document.getElementById('clearActivityModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+  
+  function submitClearModal(event) {
+    event.preventDefault();
+    const csrfInput = document.getElementById('clear-csrf-input');
+    htmx.ajax('POST', '/dashboard/clear_recent_activity', {
+      values: { csrf_token: csrfInput.value },
+      swap: 'none',
+      handler: function(elt, info) {
+        closeClearModal();
+      }
+    });
+  }
+
+  // Close when clicking outside modal content
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('clearActivityModal');
+    if (event.target === modal) {
+      closeClearModal();
+    }
+  });
+</script>
+{% endblock %}

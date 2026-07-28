@@ -72,6 +72,7 @@ from src.web.app_deps import (
     get_db, close_db, SESSION_COOKIE, templates
 )
 from src.web.auth_routes import router as auth_router
+from src.web.csrf import generate_csrf_token, verify_csrf_token
 
 app.include_router(auth_router)
 
@@ -185,6 +186,31 @@ def dashboard(request: Request) -> typing.Any:
     finally:
         close_db(db)
 
+@app.post("/dashboard/clear_recent_activity")
+def dashboard_clear_recent_activity(request: Request, csrf_token: str = Form(...)) -> typing.Any:
+    print(f"dashboard_clear_recent_activity called! CSRF: {csrf_token[:10]}...")
+    if not verify_csrf_token(request, csrf_token):
+        print("CSRF verification failed!")
+        return HTMLResponse(status_code=403)
+        
+    db = get_db()
+    try:
+        user = require_login(request, db)
+        if isinstance(user, RedirectResponse):
+            print("User not logged in!")
+            return user
+        
+        if user.role not in {"admin", "manager", "owner", "staff"}:
+            print("User cannot edit!")
+            return HTMLResponse(status_code=403)
+            
+        count = db.query(EmailLog).delete()
+        db.commit()
+        print(f"Deleted {count} email logs!")
+        
+        return HTMLResponse(status_code=200, headers={"HX-Refresh": "true"})
+    finally:
+        close_db(db)
 
 @app.get("/dashboard/monitor", response_class=HTMLResponse)
 def dashboard_monitor(request: Request) -> typing.Any:
@@ -239,6 +265,7 @@ def dashboard_monitor(request: Request) -> typing.Any:
                 "upcoming": upcoming,
                 "user_count": user_count,
                 "module_count": module_count,
+                "csrf_token": generate_csrf_token(request),
             },
             user,
         )
