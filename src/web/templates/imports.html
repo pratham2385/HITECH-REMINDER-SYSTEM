@@ -31,7 +31,12 @@
             <td>{{ item.sheet_count }}</td>
             <td>{{ item.row_count }}</td>
             <td>{{ item.created_at.strftime("%d %b %Y %H:%M") }}</td>
-            <td><a href="/imports/{{ item.id }}">Open</a></td>
+            <td style="display: flex; gap: 8px;">
+              <a href="/imports/{{ item.id }}" class="button small ghost">Open</a>
+              <form method="post" action="/imports/{{ item.id }}/delete" onsubmit="return confirm('Are you sure you want to delete this import?');" style="margin: 0;">
+                <button type="submit" class="button small ghost" style="color: var(--text-muted);">Delete</button>
+              </form>
+            </td>
           </tr>
         {% else %}
           <tr><td colspan="6" class="empty">No imports yet.</td></tr>

@@ -189,19 +189,19 @@
     
     <div style="flex: 1; position: relative; min-width: 200px;">
       <select name="module_id" style="width: 100%; appearance: none; padding: 12px 40px 12px 20px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-        <option value="all">All Modules</option>
-        {% for mod in modules %}
-          <option value="{{ mod.id }}" {% if module_id|string == mod.id|string %}selected{% endif %}>{{ mod.name }}</option>
+        <option value="all">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if module_id|string == cat|string %}selected{% endif %}>{{ cat }}</option>
         {% endfor %}
       </select>
       <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
     </div>
     
     <div style="flex: 1; position: relative; min-width: 200px;">
-      <select name="user_id" style="width: 100%; appearance: none; padding: 12px 40px 12px 20px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-        <option value="all">All Users</option>
-        {% for u in users %}
-          <option value="{{ u.id }}" {% if user_id|string == u.id|string %}selected{% endif %}>{{ u.display_name }}</option>
+      <select name="recipient_id" style="width: 100%; appearance: none; padding: 12px 40px 12px 20px; background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-full); font-size: 0.95rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+        <option value="all">All Recipients</option>
+        {% for r in recipients %}
+          <option value="{{ r.id }}" {% if recipient_id|string == r.id|string %}selected{% endif %}>{{ r.name }}</option>
         {% endfor %}
       </select>
       <svg width="18" height="18" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
@@ -212,7 +212,7 @@
   <div id="activities-table-container" hx-get="/activities" hx-trigger="activityDeleted from:body" hx-select="#activities-table-container" hx-swap="outerHTML">
   <div class="activities-grid" id="activities-table">
     {% for item in activities %}
-      <div class="activity-card activity-row" data-freq="{{ item.frequency|lower }}" data-search="{{ item.activity|lower }} {% if item.linked_module %}{{ item.linked_module.name|lower }}{% endif %}">
+      <div class="activity-card activity-row" data-freq="{{ item.frequency|lower }}" data-search="{{ item.activity|lower }} {% if item.category %}{{ item.category|lower }}{% endif %}">
         
         <div class="card-header">
           <div style="display: flex; flex-direction: column;">
@@ -246,18 +246,22 @@
         </div>
         {% endif %}
 
-        {% if item.linked_module %}
+        {% if item.category %}
           <div style="margin-top: 4px;">
-            <a href="/modules/{{ item.linked_module.id }}" class="button small ghost" style="padding: 6px 12px; background: rgba(15, 124, 112, 0.05); color: var(--primary); border: 1px dashed rgba(15, 124, 112, 0.3); border-radius: var(--radius-sm); width: fit-content; text-decoration: none; display: flex; align-items: center;">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
-              {{ item.linked_module.name }}
-            </a>
+            <span class="status-badge" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2); padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600;">
+              {{ item.category }}
+            </span>
           </div>
         {% endif %}
 
         <div class="card-footer">
           <div class="assigned-user">
-            {% if item.assigned_user %}
+            {% if item.recipient %}
+              <div class="user-avatar" title="{{ item.recipient.name }}">
+                {{ item.recipient.name[:2]|upper }}
+              </div>
+              <span class="user-name">{{ item.recipient.name }}</span>
+            {% elif item.assigned_user %}
               <div class="user-avatar" title="{{ item.assigned_user.display_name }}">
                 {{ item.assigned_user.display_name[:2] }}
               </div>

@@ -25,6 +25,8 @@ from src.db.models import (
     User,
     WhatsAppLog,
     WorkbookImport,
+    TaskCollection,
+    Recipient,
 )
 from src.db.session import get_session_factory, init_database
 from src.security import hash_password, sign_session, verify_password, verify_session
@@ -106,13 +108,21 @@ def dashboard(request: Request) -> typing.Any:
         today = date.today()
         due_records = get_due_activity_records(db, logger)
         upcoming = get_upcoming_activity_records(db, today, logger, days=30, limit=12)
-        activities = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True)).all()
+        active_workspace = db.query(TaskCollection).filter_by(is_active=True).first()
+        activities_query = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True))
+        if active_workspace:
+            activities_query = activities_query.filter(ActivityRecord.collection_id == active_workspace.id)
+            
+        activities = activities_query.all()
+        categories = sorted(list(set(a.category for a in activities if a.category)))
+        
         pending_count = sum(1 for row in activities if (row.status or "").strip().casefold() != "done")
         done_count = sum(1 for row in activities if (row.status or "").strip().casefold() == "done")
         last_run = db.query(ReminderRun).order_by(ReminderRun.created_at.desc()).first()
         last_email = db.query(EmailLog).order_by(EmailLog.created_at.desc()).first()
         last_whatsapp = db.query(WhatsAppLog).order_by(WhatsAppLog.created_at.desc()).first()
-        modules = db.query(Module).order_by(Module.name.asc()).limit(8).all()
+        modules = categories[:8]
+        module_count = len(categories)
         
         from datetime import datetime
         first_day_of_month = datetime(today.year, today.month, 1)
@@ -168,7 +178,7 @@ def dashboard(request: Request) -> typing.Any:
                 "pending_count": pending_count,
                 "done_count": done_count,
                 "activity_count": len(activities),
-                "module_count": db.query(Module).count(),
+                "module_count": module_count,
                 "last_run": last_run,
                 "last_email": last_email,
                 "last_whatsapp": last_whatsapp,
@@ -225,7 +235,12 @@ def dashboard_monitor(request: Request) -> typing.Any:
         start_of_today = datetime(today.year, today.month, today.day)
         
         # Activity Stats
-        activities = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True)).all()
+        active_workspace = db.query(TaskCollection).filter_by(is_active=True).first()
+        activities_query = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True))
+        if active_workspace:
+            activities_query = activities_query.filter(ActivityRecord.collection_id == active_workspace.id)
+            
+        activities = activities_query.all()
         pending_count = sum(1 for row in activities if (row.status or "").strip().casefold() != "done")
         done_count = sum(1 for row in activities if (row.status or "").strip().casefold() == "done")
         activity_count = len(activities)
@@ -277,7 +292,7 @@ def dashboard_monitor(request: Request) -> typing.Any:
 def activities(
     request: Request,
     search: str = "",
-    user_id: str = "",
+    recipient_id: str = "",
     module_id: str = ""
 ) -> typing.Any:
     db = get_db()
@@ -286,40 +301,47 @@ def activities(
         if isinstance(user, RedirectResponse):
             return user
             
+        active_collection = db.query(TaskCollection).filter(TaskCollection.is_active == True).first()
         query = db.query(ActivityRecord).filter(ActivityRecord.is_active.is_(True))
         
+        if active_collection:
+            query = query.filter(ActivityRecord.collection_id == active_collection.id)
+
         if search:
             query = query.filter(ActivityRecord.activity.ilike(f"%{search}%"))
             
-        if user_id and user_id != "all":
+        if recipient_id and recipient_id != "all":
             try:
-                uid = int(user_id)
-                query = query.filter(ActivityRecord.assigned_user_id == uid)
+                rid = int(recipient_id)
+                query = query.filter(ActivityRecord.recipient_id == rid)
             except ValueError:
                 pass
                 
         if module_id and module_id != "all":
-            try:
-                mid = int(module_id)
-                query = query.filter(ActivityRecord.linked_module_id == mid)
-            except ValueError:
-                pass
+            query = query.filter(ActivityRecord.category == module_id)
                 
         rows = query.order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc()).all()
         
-        modules = db.query(Module).order_by(Module.name.asc()).all()
+        categories = sorted(list(set(a.category for a in rows if a.category)))
         users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
+        recipients = []
+        if active_collection:
+            recipients = db.query(Recipient).filter(Recipient.workspace_id == active_collection.id).all()
+        else:
+            recipients = db.query(Recipient).all()
         
         return render(
             request, 
             "activities.html", 
             {
                 "activities": rows,
-                "modules": modules,
+                "categories": categories,
                 "users": users,
+                "recipients": recipients,
                 "search": search,
-                "user_id": user_id,
-                "module_id": module_id
+                "recipient_id": recipient_id,
+                "module_id": module_id,
+                "active_collection": active_collection
             }, 
             user
         )
@@ -334,12 +356,14 @@ def activity_new(request: Request) -> typing.Any:
         user = require_editor(request, db)
         if isinstance(user, RedirectResponse):
             return user
-        modules = db.query(Module).order_by(Module.name.asc()).all()
         users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
+        active_collection = db.query(TaskCollection).filter(TaskCollection.is_active == True).first()
+        recipients = db.query(Recipient).filter(Recipient.workspace_id == active_collection.id).all() if active_collection else db.query(Recipient).all()
+        categories = sorted(list(set(a.category for a in db.query(ActivityRecord).all() if a.category)))
         return render(
             request,
             "activity_form.html",
-            {"activity": None, "modules": modules, "users": users, "frequencies": FREQUENCIES},
+            {"activity": None, "categories": categories, "users": users, "recipients": recipients, "frequencies": FREQUENCIES},
             user,
         )
     finally:
@@ -355,7 +379,8 @@ def activity_create(
     link: str = Form(""),
     status: str = Form(""),
     remark: str = Form(""),
-    linked_module_id: str = Form(""),
+    category: str = Form(""),
+    recipient_id: str = Form(""),
     assigned_user_id: str = Form(""),
     timezone: str = Form("UTC"),
     send_time: str = Form("09:00"),
@@ -421,7 +446,8 @@ def activity_create(
                 link=link.strip(),
                 status=status.strip(),
                 remark=remark.strip(),
-                linked_module_id=int(linked_module_id) if linked_module_id else None,
+                category=category.strip() if category else None,
+                recipient_id=int(recipient_id) if recipient_id else None,
                 assigned_user_id=int(assigned_user_id) if assigned_user_id else None,
                 timezone=timezone.strip(),
                 send_time=send_time.strip(),
@@ -454,12 +480,14 @@ def activity_edit(request: Request, activity_id: int) -> typing.Any:
         activity = db.query(ActivityRecord).filter(ActivityRecord.id == activity_id).first()
         if activity is None:
             return redirect("/activities?error=Activity not found")
-        modules = db.query(Module).order_by(Module.name.asc()).all()
         users = db.query(User).filter(User.is_active.is_(True)).order_by(User.display_name.asc()).all()
+        active_collection = db.query(TaskCollection).filter(TaskCollection.is_active == True).first()
+        recipients = db.query(Recipient).filter(Recipient.workspace_id == active_collection.id).all() if active_collection else db.query(Recipient).all()
+        categories = sorted(list(set(a.category for a in db.query(ActivityRecord).all() if a.category)))
         return render(
             request,
             "activity_form.html",
-            {"activity": activity, "modules": modules, "users": users, "frequencies": FREQUENCIES},
+            {"activity": activity, "categories": categories, "users": users, "recipients": recipients, "frequencies": FREQUENCIES},
             user,
         )
     finally:
@@ -476,7 +504,8 @@ def activity_update(
     link: str = Form(""),
     status: str = Form(""),
     remark: str = Form(""),
-    linked_module_id: str = Form(""),
+    category: str = Form(""),
+    recipient_id: str = Form(""),
     assigned_user_id: str = Form(""),
     timezone: str = Form("UTC"),
     send_time: str = Form("09:00"),
@@ -503,7 +532,8 @@ def activity_update(
         row.link = link.strip()
         row.status = status.strip()
         row.remark = remark.strip()
-        row.linked_module_id = int(linked_module_id) if linked_module_id else None
+        row.category = category.strip() if category else None
+        row.recipient_id = int(recipient_id) if recipient_id else None
         row.assigned_user_id = int(assigned_user_id) if assigned_user_id else None
         
         day_of_month_int = int(day_of_month) if day_of_month else None
@@ -632,122 +662,6 @@ def activity_send_reminder(request: Request, activity_id: int) -> RedirectRespon
         close_db(db)
 
 
-@app.get("/modules", response_class=HTMLResponse)
-def modules(request: Request) -> typing.Any:
-    db = get_db()
-    try:
-        user = require_login(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        rows = db.query(Module).order_by(Module.name.asc()).all()
-        return render(request, "modules.html", {"modules": rows}, user)
-    finally:
-        close_db(db)
-
-
-@app.get("/modules/{module_id}", response_class=HTMLResponse)
-def module_detail(request: Request, module_id: int) -> typing.Any:
-    db = get_db()
-    try:
-        user = require_login(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        module = db.query(Module).filter(Module.id == module_id).first()
-        if module is None:
-            return redirect("/modules?error=Module not found")
-        fields = sorted(module.fields, key=lambda item: item.position)
-        records = sorted(module.records, key=lambda item: item.row_number)
-        record_rows = [{"record": record, "values": parse_json_values(record)} for record in records]
-        return render(
-            request,
-            "module_detail.html",
-            {"module": module, "fields": fields, "record_rows": record_rows},
-            user,
-        )
-    finally:
-        close_db(db)
-
-
-@app.post("/modules/{module_id}/save")
-async def module_save(request: Request, module_id: int) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_editor(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        module = db.query(Module).filter(Module.id == module_id).first()
-        if module is None:
-            return redirect("/modules?error=Module not found")
-
-        form = await request.form()
-        fields = sorted(module.fields, key=lambda item: item.position)
-        for record in module.records:
-            values = {}
-            for field in fields:
-                values[field.name] = str(form.get(f"cell_{record.id}_{field.id}", "")).strip()
-            record.values_json = json.dumps(values, ensure_ascii=False)
-        db.commit()
-        return redirect(f"/modules/{module_id}?notice=Module saved")
-    finally:
-        close_db(db)
-
-
-@app.post("/modules/{module_id}/rows/new")
-def module_add_row(request: Request, module_id: int) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_editor(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        module = db.query(Module).filter(Module.id == module_id).first()
-        if module is None:
-            return redirect("/modules?error=Module not found")
-        fields = sorted(module.fields, key=lambda item: item.position)
-        values = {field.name: "" for field in fields}
-        next_row = (max((record.row_number for record in module.records), default=0) + 1)
-        db.add(ModuleDataRecord(module_id=module.id, row_number=next_row, values_json=json.dumps(values)))
-        db.commit()
-        return redirect(f"/modules/{module_id}?notice=Row added")
-    finally:
-        close_db(db)
-
-
-@app.post("/modules/{module_id}/rows/{record_id}/delete")
-def module_delete_row(request: Request, module_id: int, record_id: int) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_editor(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        record = (
-            db.query(ModuleDataRecord)
-            .filter(ModuleDataRecord.id == record_id, ModuleDataRecord.module_id == module_id)
-            .first()
-        )
-        if record:
-            db.delete(record)
-            db.commit()
-        return redirect(f"/modules/{module_id}?notice=Row deleted")
-    finally:
-        close_db(db)
-
-
-@app.post("/modules/{module_id}/delete")
-def module_delete(request: Request, module_id: int) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_admin(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        module = db.query(Module).filter(Module.id == module_id).first()
-        if module:
-            db.delete(module)
-            db.commit()
-        return redirect("/modules?notice=Module deleted")
-    finally:
-        close_db(db)
-
-
 @app.get("/imports", response_class=HTMLResponse)
 def imports(request: Request) -> typing.Any:
     db = get_db()
@@ -814,6 +728,41 @@ def import_detail(request: Request, import_id: int) -> typing.Any:
         if record.status == "pending":
             preview = ExcelImportService(settings.upload_dir).preview_workbook(Path(record.stored_path))
         return render(request, "import_detail.html", {"import_record": record, "preview": preview}, user)
+    finally:
+        close_db(db)
+
+@app.post("/imports/{import_id}/delete")
+def import_delete(request: Request, import_id: int) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_login(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        record = db.query(WorkbookImport).filter(WorkbookImport.id == import_id).first()
+        if not record:
+            return redirect("/imports?error=Import not found")
+        
+        # Optional: delete the file from the system
+        if record.stored_path:
+            import os
+            try:
+                if os.path.exists(record.stored_path):
+                    os.remove(record.stored_path)
+            except OSError:
+                pass
+                
+        # Delete corresponding workspace if it exists
+        workspace = db.query(TaskCollection).filter(
+            TaskCollection.description == f"Auto-generated workspace for import {import_id}"
+        ).first()
+        if workspace:
+            if workspace.is_active:
+                return redirect("/imports?error=Cannot delete import because its workspace is active")
+            db.delete(workspace)
+
+        db.delete(record)
+        db.commit()
+        return redirect("/imports?notice=Import deleted successfully")
     finally:
         close_db(db)
 
@@ -1000,3 +949,154 @@ def reminders_send_test_whatsapp(request: Request) -> RedirectResponse:
         close_db(db)
 
 
+@app.get("/collections", response_class=HTMLResponse)
+def collections_list(request: Request) -> typing.Any:
+    db = get_db()
+    try:
+        user = require_login(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        collections = db.query(TaskCollection).order_by(TaskCollection.created_at.desc()).all()
+        return render(request, "collections.html", {"collections": collections}, user)
+    finally:
+        close_db(db)
+
+@app.get("/collections/new", response_class=HTMLResponse)
+def collections_new(request: Request) -> typing.Any:
+    db = get_db()
+    try:
+        user = require_editor(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        return render(request, "collection_form.html", {"collection": None}, user)
+    finally:
+        close_db(db)
+
+@app.post("/collections/new")
+def collections_create(
+    request: Request,
+    name: str = Form(...),
+    description: str = Form(""),
+) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_editor(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+
+        collection = TaskCollection(
+            name=name.strip(),
+            description=description.strip(),
+            import_date=date.today(),
+            is_active=False
+        )
+        db.add(collection)
+        db.commit()
+        return redirect("/collections?success=Workspace created")
+    finally:
+        close_db(db)
+
+@app.get("/collections/{collection_id}/edit", response_class=HTMLResponse)
+def collections_edit(request: Request, collection_id: int) -> typing.Any:
+    db = get_db()
+    try:
+        user = require_editor(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        collection = db.query(TaskCollection).get(collection_id)
+        if not collection:
+            return redirect("/collections?error=Workspace not found")
+        return render(request, "collection_form.html", {"collection": collection}, user)
+    finally:
+        close_db(db)
+
+@app.post("/collections/{collection_id}/edit")
+def collections_update(
+    request: Request,
+    collection_id: int,
+    name: str = Form(...),
+    description: str = Form(""),
+) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_editor(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        collection = db.query(TaskCollection).get(collection_id)
+        if not collection:
+            return redirect("/collections?error=Workspace not found")
+
+        collection.name = name.strip()
+        collection.description = description.strip()
+        db.commit()
+        return redirect("/collections?success=Workspace updated")
+    finally:
+        close_db(db)
+
+@app.post("/collections/{collection_id}/delete")
+def collections_delete(request: Request, collection_id: int) -> RedirectResponse:
+    print(f'--- DELETING {collection_id} ---', flush=True)
+    db = get_db()
+    try:
+        user = require_manager(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        collection = db.query(TaskCollection).get(collection_id)
+        if not collection:
+            return redirect("/collections?error=Workspace not found")
+            
+        was_active = collection.is_active
+
+        # Delete corresponding import if this was auto-generated
+        if collection.description and collection.description.startswith("Auto-generated workspace for import "):
+            try:
+                import_id = int(collection.description.replace("Auto-generated workspace for import ", ""))
+                record = db.query(WorkbookImport).filter(WorkbookImport.id == import_id).first()
+                if record:
+                    if record.stored_path:
+                        import os
+                        try:
+                            if os.path.exists(record.stored_path):
+                                os.remove(record.stored_path)
+                        except OSError:
+                            pass
+                    db.delete(record)
+            except ValueError:
+                pass
+
+        db.delete(collection)
+        
+        # If the deleted workspace was active, activate another one if available
+        if was_active:
+            fallback = db.query(TaskCollection).filter(TaskCollection.id != collection_id).order_by(TaskCollection.created_at.desc()).first()
+            if fallback:
+                fallback.is_active = True
+                
+        db.commit()
+        
+        if request.headers.get("HX-Request"):
+            return HTMLResponse(status_code=200, headers={"HX-Refresh": "true"})
+            
+        return redirect("/collections?success=Workspace deleted")
+    finally:
+        close_db(db)
+
+@app.post("/collections/{collection_id}/activate")
+def collections_activate(request: Request, collection_id: int) -> RedirectResponse:
+    db = get_db()
+    try:
+        user = require_editor(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        collection = db.query(TaskCollection).get(collection_id)
+        if not collection:
+            return redirect("/collections?error=Workspace not found")
+
+        # Deactivate all others
+        db.query(TaskCollection).update({TaskCollection.is_active: False})
+        # Activate this one
+        collection.is_active = True
+        db.commit()
+        return redirect("/collections?success=Active Workspace switched")
+    finally:
+        close_db(db)

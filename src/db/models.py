@@ -34,14 +34,49 @@ class User(Base):
     activities = relationship("ActivityRecord", back_populates="assigned_user")
 
 
+class TaskCollection(Base):
+    """A collection of tasks, representing an imported Excel file or custom group. Also referred to as a Workspace."""
+
+    __tablename__ = "task_collections"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    import_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    imported_file_name = Column(String(255), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    activities = relationship("ActivityRecord", back_populates="task_collection", cascade="all, delete-orphan")
+    modules = relationship("Module", back_populates="task_collection", cascade="all, delete-orphan")
+    recipients = relationship("Recipient", back_populates="workspace", cascade="all, delete-orphan")
+
+
+class Recipient(Base):
+    """Email recipient mapped from imported Workspaces."""
+
+    __tablename__ = "recipients"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=False, nullable=False, index=True)
+    name = Column(String(255), nullable=True)
+    workspace_id = Column(Integer, ForeignKey("task_collections.id", ondelete="CASCADE"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    activities = relationship("ActivityRecord", back_populates="recipient")
+    workspace = relationship("TaskCollection", back_populates="recipients")
+
+
 class ActivityRecord(Base):
     """Reminder activity maintained from the dashboard."""
 
     __tablename__ = "activities"
 
     id = Column(Integer, primary_key=True)
-    activity = Column(String(255), nullable=False)
-    frequency = Column(String(50), nullable=False)
+    external_id = Column(String(255), nullable=True, index=True)
+    activity = Column(String(255), nullable=False, index=True)
+    category = Column(String(255), nullable=True)
+    frequency = Column(String(50), nullable=True)
     date_value = Column(String(100), nullable=True)
     link = Column(String(255), nullable=True)
     status = Column(String(50), nullable=True)
@@ -65,9 +100,14 @@ class ActivityRecord(Base):
     # Email Customization
     email_subject_template = Column(String(255), nullable=True)
     email_body_template = Column(Text, nullable=True)
+    
+    # Execution Rules
+    reminder_before_minutes = Column(Integer, nullable=True)
 
     linked_module_id = Column(Integer, ForeignKey("modules.id", ondelete="SET NULL"), nullable=True)
     assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    collection_id = Column(Integer, ForeignKey("task_collections.id", ondelete="CASCADE"), nullable=True)
+    recipient_id = Column(Integer, ForeignKey("recipients.id", ondelete="SET NULL"), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     email_enabled = Column(Boolean, nullable=False, default=True)
@@ -77,6 +117,8 @@ class ActivityRecord(Base):
 
     linked_module = relationship("Module", back_populates="activities")
     assigned_user = relationship("User", back_populates="activities")
+    task_collection = relationship("TaskCollection", back_populates="activities")
+    recipient = relationship("Recipient", back_populates="activities")
 
 
 class Module(Base):
@@ -88,11 +130,13 @@ class Module(Base):
     name = Column(String(255), nullable=False, index=True)
     source_sheet_name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
+    workspace_id = Column(Integer, ForeignKey("task_collections.id", ondelete="CASCADE"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     fields = relationship("ModuleField", back_populates="module", cascade="all, delete-orphan")
     records = relationship("ModuleDataRecord", back_populates="module", cascade="all, delete-orphan")
     activities = relationship("ActivityRecord", back_populates="linked_module")
+    task_collection = relationship("TaskCollection", back_populates="modules")
 
 
 class ModuleField(Base):

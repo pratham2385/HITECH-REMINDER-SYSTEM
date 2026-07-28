@@ -15,14 +15,23 @@ from src.scheduler.schedule_checker import ScheduleChecker
 def activity_record_to_domain(record: ActivityRecord) -> Activity:
     """Convert a database activity row into the scheduler domain model."""
 
+    email = None
+    name = None
+    if record.recipient:
+        email = record.recipient.email
+        name = record.recipient.name
+    elif record.assigned_user:
+        email = record.assigned_user.email
+        name = record.assigned_user.display_name
+
     return Activity(
         activity=record.activity,
         frequency=record.frequency,
         date_value=record.date_value,
         row_number=record.id,
         assigned_user_id=record.assigned_user.id if record.assigned_user else None,
-        assigned_user_email=record.assigned_user.email if record.assigned_user else None,
-        assigned_user_name=record.assigned_user.display_name if record.assigned_user else None,
+        assigned_user_email=email,
+        assigned_user_name=name,
     )
 
 
@@ -35,9 +44,13 @@ def get_due_activity_records(
     from datetime import datetime
     
     now = now_utc or datetime.utcnow()
+    from src.db.models import TaskCollection
+    
     records = (
         session.query(ActivityRecord)
+        .join(TaskCollection, ActivityRecord.collection_id == TaskCollection.id)
         .filter(ActivityRecord.is_active.is_(True))
+        .filter(TaskCollection.is_active.is_(True))
         .filter(ActivityRecord.next_run_at <= now)
         .order_by(ActivityRecord.sort_order.asc(), ActivityRecord.id.asc())
         .all()
@@ -56,9 +69,13 @@ def get_upcoming_activity_records(
     from datetime import datetime, timedelta
     
     end_date = datetime.utcnow() + timedelta(days=days)
+    from src.db.models import TaskCollection
+    
     records = (
         session.query(ActivityRecord)
+        .join(TaskCollection, ActivityRecord.collection_id == TaskCollection.id)
         .filter(ActivityRecord.is_active.is_(True))
+        .filter(TaskCollection.is_active.is_(True))
         .filter(ActivityRecord.next_run_at != None)
         .filter(ActivityRecord.next_run_at <= end_date)
         .order_by(ActivityRecord.next_run_at.asc())
