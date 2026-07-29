@@ -43,9 +43,3 @@ A robust, full-stack compliance reminder and notification system built for medic
    ```bash
    uvicorn src.web.app:app --reload
    ```
-
-## Production Deployment
-Please refer to `DEPLOYMENT.md` for instructions on running via Docker Compose or Windows Task Scheduler.
-
-## License
-Proprietary / Closed Source.
