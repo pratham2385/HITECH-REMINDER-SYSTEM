@@ -39,7 +39,27 @@ def get_engine(settings: Settings | None = None):
     if _engine is None:
         active_settings = settings or load_settings()
         database_url = normalize_database_url(active_settings.database_url)
-        connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+        print(f"[DB] Initializing database engine.")
+        
+        # Obfuscate password in printed URL if it exists
+        display_url = database_url
+        if "@" in display_url and "://" in display_url:
+            parts = display_url.split("@")
+            prefix = parts[0].split("://")[0] + "://***:***"
+            display_url = prefix + "@" + parts[1]
+            
+        print(f"[DB] Configured DATABASE_URL: {display_url}")
+        
+        if database_url.startswith("sqlite"):
+            print("[DB] Using SQLite backend.")
+            connect_args = {"check_same_thread": False}
+        elif database_url.startswith("postgresql"):
+            print("[DB] Using PostgreSQL backend.")
+            connect_args = {}
+        else:
+            print(f"[DB] Using {database_url.split('://')[0]} backend.")
+            connect_args = {}
+            
         _engine = create_engine(database_url, connect_args=connect_args, future=True)
     return _engine
 
@@ -79,18 +99,23 @@ def init_database(settings: Settings | None = None) -> None:
     active_settings = settings or load_settings()
     Base.metadata.create_all(bind=get_engine(active_settings))
 
+    print("[DB] Checking if admin user exists...")
     with db_session(active_settings) as session:
         existing_user = session.query(User).first()
         if existing_user:
+            print("[DB] Admin user already exists. Initialization skipped.")
             return
 
+        print("[DB] Creating default admin user...")
         session.add(
             User(
                 username=active_settings.dashboard_admin_username,
+                email=active_settings.dashboard_admin_email,
                 display_name="Owner",
                 password_hash=hash_password(active_settings.dashboard_admin_password),
                 role="owner",
                 is_active=True,
             )
         )
+        print("[DB] Default admin user created.")
 

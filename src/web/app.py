@@ -89,6 +89,7 @@ def parse_json_values(record) -> dict[str, object]:
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> RedirectResponse:
     """Redirect to the dashboard or login."""
+    print("--> INSIDE HOME ENDPOINT")
     db = get_db()
     try:
         user = current_user(request, db)
