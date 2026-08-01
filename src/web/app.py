@@ -9,7 +9,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -85,6 +85,11 @@ def parse_json_values(record) -> dict[str, object]:
     except json.JSONDecodeError:
         return {}
     return values if isinstance(values, dict) else {}
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> Response:
+    """Return an empty response for favicon.ico to prevent 404 errors in logs."""
+    return Response(status_code=204)
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> RedirectResponse:
