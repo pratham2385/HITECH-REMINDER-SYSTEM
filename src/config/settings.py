@@ -46,13 +46,6 @@ class Settings:
     dashboard_admin_username: str
     dashboard_admin_password: str
     dashboard_admin_email: str
-    whatsapp_enabled: bool
-    whatsapp_access_token: str
-    whatsapp_phone_number_id: str
-    whatsapp_recipient_number: str
-    whatsapp_template_name: str
-    whatsapp_language_code: str
-    whatsapp_graph_api_url: str
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -89,13 +82,4 @@ def load_settings() -> Settings:
         dashboard_admin_password=os.getenv("DASHBOARD_ADMIN_PASSWORD", "ChangeMe@123").strip()
         or "ChangeMe@123",
         dashboard_admin_email=os.getenv("DASHBOARD_ADMIN_EMAIL", "admin@example.com").strip() or "admin@example.com",
-        whatsapp_enabled=_bool_env("WHATSAPP_ENABLED", False),
-        whatsapp_access_token=os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip(),
-        whatsapp_phone_number_id=os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip(),
-        whatsapp_recipient_number=os.getenv("WHATSAPP_RECIPIENT_NUMBER", "").strip(),
-        whatsapp_template_name=os.getenv("WHATSAPP_TEMPLATE_NAME", "daily_activity_reminder").strip()
-        or "daily_activity_reminder",
-        whatsapp_language_code=os.getenv("WHATSAPP_LANGUAGE_CODE", "en_US").strip() or "en_US",
-        whatsapp_graph_api_url=os.getenv("WHATSAPP_GRAPH_API_URL", "https://graph.facebook.com/v20.0").strip()
-        or "https://graph.facebook.com/v20.0",
     )

@@ -111,7 +111,6 @@ class ActivityRecord(Base):
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     email_enabled = Column(Boolean, nullable=False, default=True)
-    whatsapp_enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -212,7 +211,6 @@ class ReminderRun(Base):
     run_date = Column(String(20), nullable=False, index=True)
     activity_count = Column(Integer, nullable=False, default=0)
     email_status = Column(String(30), nullable=False, default="not_sent")
-    whatsapp_status = Column(String(30), nullable=False, default="not_sent")
     message = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
@@ -231,19 +229,7 @@ class EmailLog(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
-class WhatsAppLog(Base):
-    """WhatsApp delivery audit log."""
 
-    __tablename__ = "whatsapp_logs"
-
-    id = Column(Integer, primary_key=True)
-    reminder_run_id = Column(Integer, ForeignKey("reminder_runs.id"), nullable=True)
-    recipient = Column(String(50), nullable=False)
-    template_name = Column(String(100), nullable=False)
-    success = Column(Boolean, nullable=False, default=False)
-    provider_message_id = Column(String(255), nullable=True)
-    message = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class NotificationSetting(Base):

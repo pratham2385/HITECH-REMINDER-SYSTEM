@@ -3,7 +3,7 @@
 <section class="page-heading">
   <div>
     <h1>Reminder Preview</h1>
-    <p>Email and WhatsApp content for {{ preview_date }}.</p>
+    <p>Email reminder content for {{ preview_date }}.</p>
   </div>
   <div class="action-row">
     <form method="get" action="/reminders/preview" style="display: flex; gap: 0.5rem; align-items: center;">
@@ -11,7 +11,6 @@
     </form>
     {% if user.is_owner %}
       <form method="post" action="/reminders/send-test-email"><button type="submit" class="button">Test Email</button></form>
-      <form method="post" action="/reminders/send-test-whatsapp"><button type="submit" class="button">Test WhatsApp</button></form>
     {% endif %}
   </div>
 </section>
@@ -35,9 +34,10 @@
     {% if content %}
       <div class="email-preview" style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 4px; background: var(--bg-surface);">{{ content.body | safe }}</div>
     {% else %}
-      <p class="empty">No email or WhatsApp reminder will be sent for this date.</p>
+      <p class="empty">No email reminder will be sent for this date.</p>
     {% endif %}
   </div>
 </section>
 {% endblock %}
+
 

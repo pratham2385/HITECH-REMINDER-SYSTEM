@@ -41,7 +41,7 @@ class ScheduleCheckerTests(unittest.TestCase):
         self.assertFalse(self.checker.is_due(activity, date(2026, 8, 15)))
 
     def test_unsupported_frequency_is_not_due(self) -> None:
-        activity = Activity("Unknown", "Weekly", "Friday", 2)
+        activity = Activity("Unknown", "Hourly", "Friday", 2)
 
         self.assertFalse(self.checker.is_due(activity, date(2026, 6, 26)))
 

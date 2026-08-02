@@ -65,7 +65,7 @@ def login_submit(
     if user.must_change_password:
         response = redirect_with_msg("/profile?force_change=1", "You must change your default password.", "notice")
     else:
-        response = redirect_with_msg("/dashboard", "Logged in successfully.", "success")
+        response = redirect_with_msg("/collections", "Logged in successfully.", "success")
         
     # Cookie Max Age
     max_age = SESSION_MAX_AGE_SECONDS * 30 if remember else SESSION_MAX_AGE_SECONDS

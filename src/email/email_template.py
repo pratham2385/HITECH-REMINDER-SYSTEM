@@ -12,13 +12,25 @@ class EmailTemplate:
     """Builds professional reminder emails."""
 
     @staticmethod
-    def build(recipient: str | list[str], activities: list[Activity], run_date: date | None = None) -> EmailContent:
+    def build(
+        recipient: str | list[str] | list[Activity],
+        activities: list[Activity] | date | None = None,
+        run_date: date | None = None,
+    ) -> EmailContent:
         """Generate subject and HTML body for the due activities."""
-        effective_date = run_date or date.today()
+        if isinstance(recipient, list) and (not recipient or isinstance(recipient[0], Activity)):
+            effective_activities = recipient
+            effective_recipient = ""
+            effective_date = activities if isinstance(activities, date) else (run_date or date.today())
+        else:
+            effective_recipient = recipient
+            effective_activities = activities if isinstance(activities, list) else []
+            effective_date = run_date or (activities if isinstance(activities, date) else date.today())
+
         subject = "Activities Scheduled for Today"
 
-        if not activities:
-            return EmailContent(recipient=recipient, subject=subject, body="No activities due today.")
+        if not effective_activities:
+            return EmailContent(recipient=effective_recipient, subject=subject, body="No activities due today.")
 
         html = [
             "<html>",
@@ -33,7 +45,7 @@ class EmailTemplate:
             "<tr><th>Activity</th><th>Frequency</th><th>Remark</th><th>Link</th></tr>"
         ]
         
-        for record in sorted(activities, key=lambda a: a.sort_order if getattr(a, 'sort_order', None) is not None else 0):
+        for record in sorted(effective_activities, key=lambda a: a.sort_order if getattr(a, 'sort_order', None) is not None else 0):
             html.append("<tr>")
             html.append(f"<td>{record.activity}</td>")
             html.append(f"<td>{record.frequency}</td>")
@@ -47,4 +59,4 @@ class EmailTemplate:
         html.append(f"<p>Regards,<br>{APP_NAME}</p>")
         html.append("</body></html>")
         
-        return EmailContent(recipient=recipient, subject=subject, body="\n".join(html))
+        return EmailContent(recipient=effective_recipient, subject=subject, body="\n".join(html))

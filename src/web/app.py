@@ -23,7 +23,6 @@ from src.db.models import (
     ModuleField,
     ReminderRun,
     User,
-    WhatsAppLog,
     WorkbookImport,
     TaskCollection,
     Recipient,
@@ -40,7 +39,6 @@ from src.services.reminder_service import (
     build_preview_content,
     get_due_domain_activities,
     send_test_email,
-    send_test_whatsapp,
 )
 from src.services.settings_service import effective_settings, masked, set_setting
 from src.utils.logger import setup_logging
@@ -93,14 +91,19 @@ async def favicon() -> Response:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> RedirectResponse:
-    """Redirect to the dashboard or login."""
-    print("--> INSIDE HOME ENDPOINT")
+    """Redirect to workspaces or login."""
     db = get_db()
     try:
         user = current_user(request, db)
-        return redirect("/dashboard" if user else "/login")
+        return redirect("/collections" if user else "/login")
     finally:
         close_db(db)
+
+
+@app.get("/workspaces", response_class=HTMLResponse)
+def workspaces(request: Request) -> RedirectResponse:
+    """Alias redirect to workspaces collection page."""
+    return redirect("/collections")
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -126,7 +129,6 @@ def dashboard(request: Request) -> typing.Any:
         done_count = sum(1 for row in activities if (row.status or "").strip().casefold() == "done")
         last_run = db.query(ReminderRun).order_by(ReminderRun.created_at.desc()).first()
         last_email = db.query(EmailLog).order_by(EmailLog.created_at.desc()).first()
-        last_whatsapp = db.query(WhatsAppLog).order_by(WhatsAppLog.created_at.desc()).first()
         modules = categories[:8]
         module_count = len(categories)
         
@@ -187,7 +189,6 @@ def dashboard(request: Request) -> typing.Any:
                 "module_count": module_count,
                 "last_run": last_run,
                 "last_email": last_email,
-                "last_whatsapp": last_whatsapp,
                 "modules": modules,
                 "user_count": user_count,
                 "emails_sent_mtd": emails_sent_mtd,
@@ -844,52 +845,7 @@ def email_settings_save(
         close_db(db)
 
 
-@app.get("/settings/whatsapp", response_class=HTMLResponse)
-def whatsapp_settings(request: Request) -> typing.Any:
-    db = get_db()
-    try:
-        user = require_admin(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        active = effective_settings(db, settings)
-        return render(
-            request,
-            "settings_whatsapp.html",
-            {"settings": active, "masked_token": masked(active.whatsapp_access_token)},
-            user,
-        )
-    finally:
-        close_db(db)
 
-
-@app.post("/settings/whatsapp")
-def whatsapp_settings_save(
-    request: Request,
-    whatsapp_enabled: str = Form("false"),
-    whatsapp_access_token: str = Form(""),
-    whatsapp_phone_number_id: str = Form(""),
-    whatsapp_recipient_number: str = Form(""),
-    whatsapp_template_name: str = Form(""),
-    whatsapp_language_code: str = Form(""),
-    whatsapp_graph_api_url: str = Form(""),
-) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_admin(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        set_setting(db, "WHATSAPP_ENABLED", "true" if whatsapp_enabled == "true" else "false")
-        if whatsapp_access_token.strip():
-            set_setting(db, "WHATSAPP_ACCESS_TOKEN", whatsapp_access_token.strip(), is_secret=True)
-        set_setting(db, "WHATSAPP_PHONE_NUMBER_ID", whatsapp_phone_number_id.strip())
-        set_setting(db, "WHATSAPP_RECIPIENT_NUMBER", whatsapp_recipient_number.strip())
-        set_setting(db, "WHATSAPP_TEMPLATE_NAME", whatsapp_template_name.strip())
-        set_setting(db, "WHATSAPP_LANGUAGE_CODE", whatsapp_language_code.strip())
-        set_setting(db, "WHATSAPP_GRAPH_API_URL", whatsapp_graph_api_url.strip())
-        db.commit()
-        return redirect("/settings/whatsapp?notice=WhatsApp settings saved")
-    finally:
-        close_db(db)
 
 
 @app.get("/reminders/preview", response_class=HTMLResponse)
@@ -940,19 +896,7 @@ def reminders_send_test_email(request: Request) -> RedirectResponse:
         close_db(db)
 
 
-@app.post("/reminders/send-test-whatsapp")
-def reminders_send_test_whatsapp(request: Request) -> RedirectResponse:
-    db = get_db()
-    try:
-        user = require_admin(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        result = send_test_whatsapp(db, settings, logger)
-        db.commit()
-        target = "notice" if result.success else "error"
-        return redirect(f"/reminders/preview?{target}={result.message}")
-    finally:
-        close_db(db)
+
 
 
 @app.get("/collections", response_class=HTMLResponse)

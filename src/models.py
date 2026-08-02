@@ -8,7 +8,7 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class Activity:
-    """Represents one activity row loaded from the Excel workbook."""
+    """Represents one activity row loaded from the Excel workbook or database."""
 
     activity: str
     frequency: str
@@ -17,6 +17,10 @@ class Activity:
     assigned_user_id: int | None = None
     assigned_user_email: str | None = None
     assigned_user_name: str | None = None
+    module_name: str | None = None
+    link: str | None = None
+    remark: str | None = None
+    sort_order: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,11 +39,3 @@ class EmailSendResult:
     success: bool
     message: str
 
-
-@dataclass(frozen=True, slots=True)
-class WhatsAppSendResult:
-    """Result returned by a WhatsApp sender implementation."""
-
-    success: bool
-    message: str
-    provider_message_id: str | None = None

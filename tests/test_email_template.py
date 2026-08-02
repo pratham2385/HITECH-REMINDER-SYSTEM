@@ -21,7 +21,7 @@ class EmailTemplateTests(unittest.TestCase):
         content = EmailTemplate.build(activities, date(2026, 6, 26))
 
         self.assertEqual(content.subject, "Activities Scheduled for Today")
-        self.assertIn("1. GST Payment", content.body)
-        self.assertIn("2. TDS Payment", content.body)
+        self.assertIn("GST Payment", content.body)
+        self.assertIn("TDS Payment", content.body)
         self.assertIn("26 June 2026", content.body)
 

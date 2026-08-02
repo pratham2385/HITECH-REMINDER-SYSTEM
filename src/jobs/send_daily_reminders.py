@@ -1,4 +1,4 @@
-"""CLI job for sending daily email and WhatsApp reminders."""
+"""CLI job for sending daily email reminders."""
 
 from __future__ import annotations
 
@@ -29,8 +29,7 @@ def run() -> int:
                 result.message,
             )
             email_failed = result.email_result is not None and not result.email_result.success
-            whatsapp_failed = result.whatsapp_result is not None and not result.whatsapp_result.success
-            return 1 if email_failed or whatsapp_failed else 0
+            return 1 if email_failed else 0
     except Exception:
         logger.exception("Unexpected exception occurred")
         return 1
